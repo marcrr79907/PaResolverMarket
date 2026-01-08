@@ -6,8 +6,8 @@ import com.market.paresolvershop.domain.auth.SignInWithGoogle
 import com.market.paresolvershop.domain.auth.SignOut
 import com.market.paresolvershop.domain.auth.SignUpWithEmail
 import com.market.paresolvershop.ui.authentication.LoginViewModel
-import com.market.paresolver.ui.authentication.RegisterViewModel
-import com.market.paresolver.ui.profilemagnament.ProfileViewModel
+import com.market.paresolvershop.ui.authentication.RegisterViewModel
+import com.market.paresolvershop.ui.profilemagnament.ProfileViewModel
 import org.koin.core.module.dsl.factoryOf
 import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
