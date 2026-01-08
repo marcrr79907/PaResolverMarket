@@ -50,10 +50,18 @@ class ProductRepositoryAndroid : ProductRepository {
 
     override suspend fun createProduct(product: Product): DataResult<Unit> {
         return try {
-            // 1. Convierte el modelo de dominio a la entidad de datos
+            // Convierte el modelo de dominio a la entidad de datos
             val productEntity = product.toEntity()
-            // 2. Guarda la entidad en Firestore
-            db.collection("products").add(productEntity).await()
+
+            // Guarda la entidad en Firestore
+            val documentReference = db.collection("products").add(productEntity).await()
+
+            // Obtiene el ID generado por Firestore.
+            val generatedId = documentReference.id
+
+            // Actualizar el documento para añadirle su propio ID.
+            db.collection("products").document(generatedId).update("id", generatedId).await()
+
             DataResult.Success(Unit)
         } catch (e: Exception) {
             DataResult.Error(e.message ?: "Error al crear el producto")
