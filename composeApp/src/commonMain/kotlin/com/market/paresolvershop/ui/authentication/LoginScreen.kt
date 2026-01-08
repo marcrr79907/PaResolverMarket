@@ -82,6 +82,13 @@ object LoginScreen : Screen {
             ) {
                 Text("Login")
             }
+            Button(
+                onClick = { throw RuntimeException("Error") },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = state !is LoginUiState.Loading
+            ) {
+                Text("Login1")
+            }
 
             Spacer(Modifier.height(16.dp))
             HorizontalDivider()

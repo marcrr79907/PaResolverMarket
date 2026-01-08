@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "1076965141728",
+    "project_id": "paresolvershop",
+    "storage_bucket": "paresolvershop.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1076965141728:android:b1534eb277e7bc3f077485",
+        "android_client_info": {
+          "package_name": "com.market.paresolvershop"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1076965141728-esg2qu1gb315hb88mlucmohug5kmb0fg.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB_bZtaT18Kr5TwI1EuGhUBhsu9YSTC1WY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1076965141728-esg2qu1gb315hb88mlucmohug5kmb0fg.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
