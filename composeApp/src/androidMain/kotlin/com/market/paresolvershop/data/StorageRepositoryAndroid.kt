@@ -12,18 +12,23 @@ class StorageRepositoryAndroid : StorageRepository {
     private val storage = Firebase.storage
 
     override suspend fun uploadImage(bytes: ByteArray, baseNameHint: String): DataResult<String> {
+        // Si no se proporciona ninguna imagen (array de bytes vacío),
+        // devolver Success con una URL vacía sin intentar subir nada.
+        if (bytes.isEmpty()) {
+            return DataResult.Success("")
+        }
+
         return try {
-            // 1. Limpiar el nombre base y generar un ID único
             val sanitizedHint = baseNameHint.trim().replace(" ", "_")
             val uniqueFileName = "${UUID.randomUUID()}_$sanitizedHint.jpg"
 
-            // 2. Definir la ruta en el storage
+            // Definir la ruta en el storage
             val storageRef = storage.reference.child("product_images/$uniqueFileName")
 
-            // 3. Subir el archivo
+            // Subir el archivo
             storageRef.putBytes(bytes).await()
 
-            // 4. Obtener la URL de descarga
+            // Obtener la URL de descarga
             val downloadUrl = storageRef.downloadUrl.await()
 
             DataResult.Success(downloadUrl.toString())

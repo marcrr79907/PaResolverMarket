@@ -70,10 +70,11 @@ class CreateProductViewModel(
             val priceDouble = formState.price.toDoubleOrNull() ?: 0.0
             val stockInt = formState.stock.toIntOrNull() ?: 0
 
-            if (formState.imageBytes == null) {
-                _screenState.value = CreateProductScreenState.Error("Debes seleccionar una imagen.")
-                return@launch
-            }
+//            if (formState.imageBytes == null) {
+//                _screenState.value = CreateProductScreenState.Error("Debes seleccionar una imagen.")
+//                return@launch
+//            }
+            val imageBytesToSend = formState.imageBytes ?: byteArrayOf()
 
             val result = createProductUseCase(
                 name = formState.name,
@@ -81,7 +82,8 @@ class CreateProductViewModel(
                 price = priceDouble,
                 stock = stockInt,
                 category = formState.category,
-                imageBytes = formState.imageBytes!!
+//                imageBytes = formState.imageBytes!!
+                imageBytes = imageBytesToSend
             )
 
             _screenState.value = when (result) {
