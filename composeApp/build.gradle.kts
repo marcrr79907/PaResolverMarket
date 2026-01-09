@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.util.Properties
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -96,6 +97,19 @@ android {
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         versionCode = 1
         versionName = "1.0"
+
+        // Leer el client ID desde local.properties
+        val localProperties = Properties()
+        val localPropertiesFile = project.rootProject.file("local.properties")
+        if (localPropertiesFile.exists()) {
+            localPropertiesFile.inputStream().use {
+                localProperties.load(it)
+            }
+        }
+        val webClientId = localProperties.getProperty("web_client_id") ?: ""
+
+        // Añadirel client ID como un recurso de cadena
+        resValue("string", "web_client_id", webClientId)
     }
     packaging {
         resources {
@@ -116,4 +130,3 @@ android {
 dependencies {
     debugImplementation(compose.uiTooling)
 }
-

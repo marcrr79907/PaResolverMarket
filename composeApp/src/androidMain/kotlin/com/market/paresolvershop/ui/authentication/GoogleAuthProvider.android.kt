@@ -86,10 +86,10 @@ private suspend fun getGoogleCredential(
         .addCredentialOption(googleIdOption)
         .build()
 
-    // Lanza la UI y espera el resultado. Esto puede lanzar NoCredentialException.
+    // Lanza la UI y espera el resultado. (Esto puede lanzar NoCredentialException)
     val result = credentialManager.getCredential(context, request)
 
-    // Nos aseguramos de que es del tipo correcto antes de devolver.
+    // Asegurar de que es del tipo correcto antes de devolver.
     return result.credential as? CustomCredential
 }
 
