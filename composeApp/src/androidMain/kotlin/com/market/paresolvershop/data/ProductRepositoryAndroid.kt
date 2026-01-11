@@ -67,4 +67,23 @@ class ProductRepositoryAndroid : ProductRepository {
             DataResult.Error(e.message ?: "Error al crear el producto")
         }
     }
+
+    override suspend fun updateProduct(product: Product): DataResult<Unit> {
+        return try {
+            val productEntity = product.toEntity()
+            db.collection("products").document(product.id).set(productEntity).await()
+            DataResult.Success(Unit)
+        } catch (e: Exception) {
+            DataResult.Error(e.message ?: "Error al actualizar el producto")
+        }
+    }
+
+    override suspend fun deleteProduct(productId: String): DataResult<Unit> {
+        return try {
+            db.collection("products").document(productId).delete().await()
+            DataResult.Success(Unit)
+        } catch (e: Exception) {
+            DataResult.Error(e.message ?: "Error al eliminar el producto")
+        }
+    }
 }

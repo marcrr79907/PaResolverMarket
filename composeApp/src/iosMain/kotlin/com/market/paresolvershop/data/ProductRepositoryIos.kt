@@ -17,4 +17,12 @@ class ProductRepositoryIos: ProductRepository {
     override suspend fun createProduct(product: Product): DataResult<Unit> {
         TODO("Not yet implemented")
     }
+
+    override suspend fun updateProduct(product: Product): DataResult<Unit> {
+        return DataResult.Error("Not yet implemented")
+    }
+
+    override suspend fun deleteProduct(productId: String): DataResult<Unit> {
+        return DataResult.Error("Not yet implemented")
+    }
 }

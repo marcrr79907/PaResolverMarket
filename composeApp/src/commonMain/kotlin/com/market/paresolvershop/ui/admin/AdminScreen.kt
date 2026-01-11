@@ -54,12 +54,8 @@ object AdminScreen : Screen {
                 Text("Gestión de Inventario", style = MaterialTheme.typography.titleLarge)
                 Spacer(modifier = Modifier.height(8.dp))
 
-                Button(onClick = { navigator.push(CreateProductScreen) }, modifier = Modifier.fillMaxWidth()) {
-                    Text("Subir Nuevo Producto")
-                }
-
-                Button(onClick = { /* TODO: Navegar a pantalla de gestionar productos */ }, modifier = Modifier.fillMaxWidth()) {
-                    Text("Ver/Editar Inventario")
+                Button(onClick = { navigator.push(InventoryScreen) }, modifier = Modifier.fillMaxWidth()) {
+                    Text("Gestionar Inventario")
                 }
             }
         }
