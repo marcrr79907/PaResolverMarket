@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.transitions.SlideTransition
 import com.market.paresolvershop.di.authModule
+import com.market.paresolvershop.di.cartModule
 import com.market.paresolvershop.di.platformModule
 import com.market.paresolvershop.di.productModule
 import com.market.paresolvershop.ui.navigation.bottombar.BottomBarScreen
@@ -17,7 +18,8 @@ fun App() {
         modules(
             authModule,
             platformModule,
-            productModule
+            productModule,
+            cartModule
         )
     }) {
         // Tema de Material Design

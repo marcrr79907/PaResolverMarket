@@ -8,6 +8,8 @@ interface AuthRepository {
 
     val authState: Flow<AuthUser?>
 
+    fun getCurrentUser(): AuthUser?
+
     suspend fun signInWithEmailAndPassword(email: String, password: String): DataResult<AuthUser>
 
     // Añadida la nueva función para el login con Google

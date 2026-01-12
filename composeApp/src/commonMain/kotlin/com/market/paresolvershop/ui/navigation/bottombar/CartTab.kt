@@ -6,9 +6,12 @@ import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import cafe.adriel.voyager.navigator.tab.Tab
 import cafe.adriel.voyager.navigator.tab.TabOptions
 import com.market.paresolvershop.ui.navigation.CartScreen
+import com.market.paresolvershop.ui.products.CartViewModel
 import compose.icons.FontAwesomeIcons
 import compose.icons.fontawesomeicons.Solid
 import compose.icons.fontawesomeicons.solid.ShoppingCart
+import org.koin.compose.viewmodel.koinViewModel
+import org.koin.core.annotation.KoinExperimentalAPI
 
 object CartTab : Tab {
     override val options: TabOptions
@@ -26,8 +29,10 @@ object CartTab : Tab {
             }
         }
 
+    @OptIn(KoinExperimentalAPI::class)
     @Composable
     override fun Content() {
-        CartScreen(onCheckout = { /* TODO */ })
+        val cartViewModel = koinViewModel<CartViewModel>()
+        CartScreen(cartViewModel = cartViewModel, onCheckout = { /* TODO */ })
     }
 }

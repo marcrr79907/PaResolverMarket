@@ -2,7 +2,9 @@ package com.market.paresolvershop.di
 
 import com.market.paresolvershop.data.repository.AuthRepository
 import com.market.paresolvershop.data.AuthRepositoryAndroid
+import com.market.paresolvershop.data.CartRepositoryAndroid
 import com.market.paresolvershop.data.ProductRepositoryAndroid
+import com.market.paresolvershop.data.repository.CartRepository
 import com.market.paresolvershop.data.repository.ProductRepository
 import com.market.paresolvershop.data.repository.StorageRepository
 import com.market.paresolvershop.data.StorageRepositoryAndroid
@@ -20,4 +22,7 @@ actual val platformModule: Module = module {
 
     // Dependencia de Storage
     singleOf(::StorageRepositoryAndroid) { bind<StorageRepository>() }
+
+    // Dependencia de Carrito
+    singleOf(::CartRepositoryAndroid) { bind<CartRepository>() }
 }

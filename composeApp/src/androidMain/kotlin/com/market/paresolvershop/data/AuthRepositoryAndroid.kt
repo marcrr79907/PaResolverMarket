@@ -55,6 +55,11 @@ class AuthRepositoryAndroid : AuthRepository {
         }
     }
 
+    override fun getCurrentUser(): AuthUser? {
+        val firebaseUser = auth.currentUser
+        return firebaseUser?.let { AuthUser(it.uid, it.email ?: "", it.displayName ?: "", "client") } // Role should be fetched from DB if needed synchronously
+    }
+
     /**
      * Flow que observa el estado de autenticación en tiempo real.
      * Ahora utiliza la función centralizada para obtener el perfil completo.
@@ -86,7 +91,6 @@ class AuthRepositoryAndroid : AuthRepository {
     }
 
     /**
-     * **SIMPLIFICADO:**
      * El login con Google ahora solo se encarga de la autenticación.
      * La creación del perfil en Firestore se delega a 'getOrCreateAuthUserInFirestore'.
      */
@@ -104,8 +108,7 @@ class AuthRepositoryAndroid : AuthRepository {
     }
 
     /**
-     * **CORREGIDO Y SIMPLIFICADO:**
-     * Ahora crea el usuario en Auth y luego llama a 'getOrCreateAuthUserInFirestore'
+     * Crea el usuario en Auth y luego llama a 'getOrCreateAuthUserInFirestore'
      * para crear el documento en Firestore, evitando duplicar lógica.
      */
     override suspend fun signUp(name: String, email: String, password: String): DataResult<AuthUser> = runCatching {

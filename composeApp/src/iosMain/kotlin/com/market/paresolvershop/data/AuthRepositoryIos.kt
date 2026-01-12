@@ -10,6 +10,10 @@ class AuthRepositoryIos: AuthRepository {
     override val authState: Flow<AuthUser?>
         get() = TODO("Not yet implemented")
 
+    override fun getCurrentUser(): AuthUser? {
+        return null
+    }
+
     override suspend fun signInWithEmailAndPassword(
         email: String,
         password: String
