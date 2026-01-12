@@ -12,20 +12,33 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.market.paresolvershop.domain.model.CartItem
+import com.market.paresolvershop.ui.products.CartEvent
 import com.market.paresolvershop.ui.products.CartViewModel
 import compose.icons.FontAwesomeIcons
 import compose.icons.fontawesomeicons.Solid
 import compose.icons.fontawesomeicons.solid.Trash
+import kotlinx.coroutines.flow.collectLatest
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CartScreen(cartViewModel: CartViewModel, onCheckout: () -> Unit) {
     val uiState by cartViewModel.uiState.collectAsState()
     var showDeleteDialog by remember { mutableStateOf<CartItem?>(null) }
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(Unit) {
+        cartViewModel.eventFlow.collectLatest { event ->
+            if (event is CartEvent.Error) {
+                snackbarHostState.showSnackbar(event.message)
+            }
+            // Los eventos de éxito se manejan en ProductDetailScreen, no aquí.
+        }
+    }
 
     showDeleteDialog?.let { item ->
         RemoveFromCartDialog(
             productName = item.product.name,
-            onConfirm = { 
+            onConfirm = {
                 cartViewModel.removeFromCart(item.product.id)
                 showDeleteDialog = null
             },
@@ -33,36 +46,40 @@ fun CartScreen(cartViewModel: CartViewModel, onCheckout: () -> Unit) {
         )
     }
 
-    if (uiState.items.isEmpty()) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("Tu carrito está vacío", style = MaterialTheme.typography.headlineSmall)
-        }
-    } else {
-        Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-            LazyColumn(modifier = Modifier.weight(1f)) {
-                items(uiState.items) { item ->
-                    CartListItem(
-                        item = item,
-                        onQuantityChange = { newQuantity ->
-                            cartViewModel.updateQuantity(item.product.id, newQuantity)
-                        },
-                        onRemove = { showDeleteDialog = item }
-                    )
-                    HorizontalDivider()
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) }
+    ) {
+        if (uiState.items.isEmpty()) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("Tu carrito está vacío", style = MaterialTheme.typography.headlineSmall)
+            }
+        } else {
+            Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+                LazyColumn(modifier = Modifier.weight(1f)) {
+                    items(uiState.items) { item ->
+                        CartListItem(
+                            item = item,
+                            onQuantityChange = { newQuantity ->
+                                cartViewModel.updateQuantity(item.product.id, newQuantity)
+                            },
+                            onRemove = { showDeleteDialog = item }
+                        )
+                        HorizontalDivider()
+                    }
                 }
-            }
-            Spacer(modifier = Modifier.height(16.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Subtotal:", style = MaterialTheme.typography.titleLarge)
-                Text("$ ${uiState.subtotal}", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            }
-            Spacer(modifier = Modifier.height(16.dp))
-            Button(onClick = onCheckout, modifier = Modifier.fillMaxWidth(), enabled = uiState.items.isNotEmpty()) {
-                Text("Proceder al Pago")
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Subtotal:", style = MaterialTheme.typography.titleLarge)
+                    Text("$ ${uiState.subtotal}", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(onClick = onCheckout, modifier = Modifier.fillMaxWidth(), enabled = uiState.items.isNotEmpty()) {
+                    Text("Proceder al Pago")
+                }
             }
         }
     }
@@ -92,7 +109,7 @@ fun CartListItem(
                 Text("Cantidad:", style = MaterialTheme.typography.bodySmall)
                 Spacer(modifier = Modifier.width(8.dp))
                 // Simple + / - buttons for quantity (could be a TextField)
-                OutlinedButton(onClick = { onQuantityChange(item.quantity - 1) }, enabled = item.quantity > 1) { Text("-") }
+                OutlinedButton(onClick = { onQuantityChange(item.quantity - 1) }, enabled = item.quantity > 0) { Text("-") }
                 Text(text = "${item.quantity}", modifier = Modifier.padding(horizontal = 8.dp))
                 OutlinedButton(onClick = { onQuantityChange(item.quantity + 1) }) { Text("+") }
             }

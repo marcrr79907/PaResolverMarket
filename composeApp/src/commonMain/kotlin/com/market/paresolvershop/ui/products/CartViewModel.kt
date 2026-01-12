@@ -63,7 +63,12 @@ class CartViewModel(
 
     fun updateQuantity(productId: String, quantity: Int) {
         viewModelScope.launch {
-            cartRepository.updateQuantity(productId, quantity)
+            when (val result = cartRepository.updateQuantity(productId, quantity)) {
+                is DataResult.Success -> { /* No-op, la UI ya se actualiza */ }
+                is DataResult.Error -> {
+                    _eventFlow.emit(CartEvent.Error(result.message))
+                }
+            }
         }
     }
 

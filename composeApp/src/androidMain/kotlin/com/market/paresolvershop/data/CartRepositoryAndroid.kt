@@ -12,7 +12,6 @@ import com.market.paresolvershop.data.repository.CartRepository
 import com.market.paresolvershop.domain.model.CartItem
 import com.market.paresolvershop.domain.model.DataResult
 import com.market.paresolvershop.domain.model.Product
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -27,7 +26,6 @@ class CartRepositoryAndroid(private val authRepository: AuthRepository) : CartRe
     private fun cartCollection(userId: String) = db.collection("users").document(userId).collection("cart")
     private fun productDocument(productId: String) = db.collection("products").document(productId)
 
-    @OptIn(ExperimentalCoroutinesApi::class)
     override fun getCartItems(): Flow<List<CartItem>> {
         return authRepository.authState.flatMapLatest { user ->
             if (user == null) {
@@ -75,7 +73,7 @@ class CartRepositoryAndroid(private val authRepository: AuthRepository) : CartRe
                     null // La transacción fue exitosa
                 } else {
                     // Si no hay stock, la transacción falla y devolvemos el error.
-                    throw Exception("No hay suficiente stock para \"${product.name}\"")
+                    throw Exception("Máximo stock para \"${product.name}\" en su carrito")
                 }
             }.await()
             DataResult.Success(Unit)
@@ -84,19 +82,19 @@ class CartRepositoryAndroid(private val authRepository: AuthRepository) : CartRe
         }
     }
 
-    override suspend fun updateQuantity(productId: String, quantity: Int) {
-        val userId = authRepository.getCurrentUser()?.id ?: return
+    override suspend fun updateQuantity(productId: String, quantity: Int): DataResult<Unit> {
+        val userId = authRepository.getCurrentUser()?.id ?: return DataResult.Error("Usuario no autenticado")
         val cartDocRef = cartCollection(userId).document(productId)
         val productDocRef = productDocument(productId)
 
-        try {
-             db.runTransaction { transaction ->
+        return try {
+            db.runTransaction { transaction ->
                 val productSnapshot = transaction.get(productDocRef)
                 val productInDb = productSnapshot.toObject<ProductEntity>()
                 val availableStock = productInDb?.stock ?: 0
 
-                if(quantity > availableStock) {
-                     throw Exception("La cantidad solicitada supera el stock disponible.")
+                if (quantity > availableStock) {
+                    throw Exception("La cantidad solicitada supera el stock disponible.")
                 }
 
                 if (quantity > 0) {
@@ -106,8 +104,9 @@ class CartRepositoryAndroid(private val authRepository: AuthRepository) : CartRe
                 }
                 null
             }.await()
-        }  catch (e: Exception) {
-            DataResult.Error(e.message ?: "Error actualizando el producto")
+            DataResult.Success(Unit)
+        } catch (e: Exception) {
+            DataResult.Error(e.message ?: "Error actualizando la cantidad")
         }
     }
 
