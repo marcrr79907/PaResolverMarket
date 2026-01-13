@@ -1,27 +1,47 @@
 package com.market.paresolvershop.ui.checkout
 
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.Button
-import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+import cafe.adriel.voyager.core.screen.Screen
+import cafe.adriel.voyager.navigator.LocalNavigator
+import cafe.adriel.voyager.navigator.currentOrThrow
+import compose.icons.FontAwesomeIcons
+import compose.icons.fontawesomeicons.Solid
+import compose.icons.fontawesomeicons.solid.ArrowLeft
 
-@Composable
-fun CheckoutPaymentScreen(onPaymentSuccess: () -> Unit) {
-    Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text("Pasarela de Pago")
-        Text("(Stripe Integration Placeholder)")
+object CheckoutPaymentScreen : Screen {
 
-        Spacer(modifier = Modifier.height(32.dp))
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    override fun Content() {
+        val navigator = LocalNavigator.currentOrThrow
 
-        Button(onClick = onPaymentSuccess, modifier = Modifier.fillMaxWidth()) {
-            Text("Pagar $ 110.00")
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text("Método de Pago") },
+                    navigationIcon = {
+                        IconButton(onClick = { navigator.pop() }) {
+                            Icon(FontAwesomeIcons.Solid.ArrowLeft, "Volver")
+                        }
+                    }
+                )
+            }
+        ) {
+            Column(
+                modifier = Modifier.fillMaxSize().padding(it),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text("Aquí iría la integración de la pasarela de pago.", style = MaterialTheme.typography.titleLarge)
+                // TODO: En un futuro, integrar Stripe, etc.
+            }
         }
     }
 }

@@ -6,6 +6,7 @@ import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.transitions.SlideTransition
 import com.market.paresolvershop.di.authModule
 import com.market.paresolvershop.di.cartModule
+import com.market.paresolvershop.di.checkoutModule
 import com.market.paresolvershop.di.platformModule
 import com.market.paresolvershop.di.productModule
 import com.market.paresolvershop.ui.navigation.bottombar.BottomBarScreen
@@ -19,7 +20,8 @@ fun App() {
             authModule,
             platformModule,
             productModule,
-            cartModule
+            cartModule,
+            checkoutModule
         )
     }) {
         // Tema de Material Design

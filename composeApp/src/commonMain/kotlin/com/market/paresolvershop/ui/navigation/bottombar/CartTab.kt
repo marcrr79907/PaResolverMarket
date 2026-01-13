@@ -39,7 +39,8 @@ object CartTab : Tab {
         val cartViewModel = koinViewModel<CartViewModel>()
         CartScreen(
             cartViewModel = cartViewModel,
-            onCheckout = { navigator.push(CheckoutShippingScreen) }
+            // Usamos el navegador padre para salir del flujo de pestañas
+            onCheckout = { navigator.parent?.push(CheckoutShippingScreen) }
         )
     }
 }
