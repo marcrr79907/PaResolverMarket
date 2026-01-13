@@ -3,8 +3,11 @@ package com.market.paresolvershop.ui.navigation.bottombar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import cafe.adriel.voyager.navigator.LocalNavigator
+import cafe.adriel.voyager.navigator.currentOrThrow
 import cafe.adriel.voyager.navigator.tab.Tab
 import cafe.adriel.voyager.navigator.tab.TabOptions
+import com.market.paresolvershop.ui.checkout.CheckoutShippingScreen
 import com.market.paresolvershop.ui.navigation.CartScreen
 import com.market.paresolvershop.ui.products.CartViewModel
 import compose.icons.FontAwesomeIcons
@@ -32,7 +35,11 @@ object CartTab : Tab {
     @OptIn(KoinExperimentalAPI::class)
     @Composable
     override fun Content() {
+        val navigator = LocalNavigator.currentOrThrow
         val cartViewModel = koinViewModel<CartViewModel>()
-        CartScreen(cartViewModel = cartViewModel, onCheckout = { /* TODO */ })
+        CartScreen(
+            cartViewModel = cartViewModel,
+            onCheckout = { navigator.push(CheckoutShippingScreen) }
+        )
     }
 }

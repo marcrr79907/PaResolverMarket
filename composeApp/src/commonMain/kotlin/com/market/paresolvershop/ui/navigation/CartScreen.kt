@@ -31,7 +31,6 @@ fun CartScreen(cartViewModel: CartViewModel, onCheckout: () -> Unit) {
             if (event is CartEvent.Error) {
                 snackbarHostState.showSnackbar(event.message)
             }
-            // Los eventos de éxito se manejan en ProductDetailScreen, no aquí.
         }
     }
 
