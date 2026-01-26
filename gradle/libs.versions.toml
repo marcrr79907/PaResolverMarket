@@ -12,9 +12,10 @@ androidx-testExt = "1.3.0"
 composeMultiplatform = "1.9.3"
 junit = "4.13.2"
 kotlin = "2.3.0"
+supabase = "3.3.0"
+kotlinx-serialization = "1.10.0"
 
 koinCore = "4.1.1"
-firebase = "34.7.0"
 composeIcons = "1.1.1"
 voyager = "1.1.0-beta03"
 multiplatform-settings = "1.3.0"
@@ -22,8 +23,6 @@ credentials = "1.5.0"
 googleid = "1.1.1"
 coil = "3.3.0"
 ktor = "3.3.3"
-gservices = "4.4.4"
-crashlytics = "3.0.6"
 roomKtx = "2.8.4"
 
 
@@ -53,18 +52,25 @@ androidx-credentials = { module = "androidx.credentials:credentials", version.re
 androidx-credentials-playservices = { module = "androidx.credentials:credentials-play-services-auth", version.ref = "credentials" }
 googleid = { module = "com.google.android.libraries.identity.googleid:googleid", version.ref = "googleid" }
 
-#Firebase
-firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebase" }
-firebase-auth = { module = "com.google.firebase:firebase-auth" }
-firebase-crashlytics = { module = "com.google.firebase:firebase-crashlytics" }
-firebase-firestore = { module = "com.google.firebase:firebase-firestore"}
-firebase-storage = { module = "com.google.firebase:firebase-storage" }
+# Supabase
+supabase-bom = { module = "io.github.jan-tennert.supabase:bom", version.ref = "supabase" }
+supabase-auth = { module = "io.github.jan-tennert.supabase:auth-kt" }
+supabase-postgrest = { module = "io.github.jan-tennert.supabase:postgrest-kt" }
+supabase-storage = { module = "io.github.jan-tennert.supabase:storage-kt" }
+supabase-realtime = { module = "io.github.jan-tennert.supabase:realtime-kt" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
+
+# Ktor
+ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
+ktor-client-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "ktor" }
+ktor-client-darwin = { module = "io.ktor:ktor-client-darwin", version.ref = "ktor" }
+ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }
+ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktor" }
 
 # Coil
 coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil"}
 coil-network = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", version.ref = "coil" }
 coil-network-ktor = { group = "io.coil-kt.coil3", name = "coil-network-ktor", version.ref = "coil" }
-ktor-client-darwin = { module = "io.ktor:ktor-client-darwin", version.ref = "ktor" }
 
 #Icons
 composeIcons-evaIcons = { module = "br.com.devsrsouza.compose.icons:eva-icons", version.ref = "composeIcons" }
@@ -84,6 +90,4 @@ androidLibrary = { id = "com.android.library", version.ref = "agp" }
 composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "composeMultiplatform" }
 composeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
-
-google-services = { id = "com.google.gms.google-services", version.ref = "gservices" }
-crashlytics = { id = "com.google.firebase.crashlytics", version.ref = "crashlytics" }
+kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }

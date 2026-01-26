@@ -6,9 +6,7 @@ plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
-
-    alias(libs.plugins.google.services)
-    alias(libs.plugins.crashlytics)
+    alias(libs.plugins.kotlinSerialization)
 }
 
 kotlin {
@@ -29,28 +27,6 @@ kotlin {
     }
     
     sourceSets {
-        androidMain.dependencies {
-            implementation(compose.preview)
-            implementation(libs.androidx.activity.compose)
-
-            // Koin
-            implementation(libs.koin.android)
-
-            // Coil
-            implementation(libs.coil.network)
-
-            // Credentials Manager
-            implementation(libs.androidx.credentials)
-            implementation(libs.androidx.credentials.playservices)
-            implementation(libs.googleid)
-
-            //FireBase
-            implementation(project.dependencies.platform(libs.firebase.bom))
-            implementation(libs.firebase.auth)
-            implementation(libs.firebase.crashlytics)
-            implementation(libs.firebase.firestore)
-            implementation(libs.firebase.storage)
-        }
         commonMain.dependencies {
             implementation(compose.runtime)
             implementation(compose.foundation)
@@ -60,6 +36,19 @@ kotlin {
             implementation(compose.components.uiToolingPreview)
             implementation(libs.androidx.lifecycle.viewmodelCompose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
+
+            // Supabase
+            implementation(project.dependencies.platform(libs.supabase.bom))
+            implementation(libs.supabase.auth)
+            implementation(libs.supabase.postgrest)
+            implementation(libs.supabase.storage)
+            implementation(libs.supabase.realtime)
+            implementation(libs.kotlinx.serialization.json)
+
+            // Ktor Core & Serialization
+            implementation(libs.ktor.client.core)
+            implementation(libs.ktor.client.content.negotiation)
+            implementation(libs.ktor.serialization.kotlinx.json)
 
             // KOIN
             implementation(libs.koin.core)
@@ -81,6 +70,41 @@ kotlin {
 
             implementation(libs.multiplatform.settings)
         }
+
+        androidMain.dependencies {
+            implementation(compose.preview)
+            implementation(libs.androidx.activity.compose)
+
+            // Ktor Engine Android
+            implementation(libs.ktor.client.okhttp)
+
+            // Koin
+            implementation(libs.koin.android)
+
+            // Coil
+            implementation(libs.coil.network)
+
+            // Credentials Manager
+            implementation(libs.androidx.credentials)
+            implementation(libs.androidx.credentials.playservices)
+            implementation(libs.googleid)
+        }
+
+        // Crear iosMain manualmente y vincular los targets
+        val iosMain by creating {
+            dependsOn(commonMain.get())
+            dependencies {
+                // Ktor Engine iOS
+                implementation(libs.ktor.client.darwin)
+            }
+        }
+        val iosArm64Main by getting {
+            dependsOn(iosMain)
+        }
+        val iosSimulatorArm64Main by getting {
+            dependsOn(iosMain)
+        }
+
         commonTest.dependencies {
             implementation(libs.kotlin.test)
         }
@@ -98,7 +122,7 @@ android {
         versionCode = 1
         versionName = "1.0"
 
-        // Leer el client ID desde local.properties
+        // Leer el client ID desde local.properties (útil para Auth de Google con Supabase)
         val localProperties = Properties()
         val localPropertiesFile = project.rootProject.file("local.properties")
         if (localPropertiesFile.exists()) {
@@ -108,7 +132,6 @@ android {
         }
         val webClientId = localProperties.getProperty("web_client_id") ?: ""
 
-        // Añadirel client ID como un recurso de cadena
         resValue("string", "web_client_id", webClientId)
     }
     packaging {
