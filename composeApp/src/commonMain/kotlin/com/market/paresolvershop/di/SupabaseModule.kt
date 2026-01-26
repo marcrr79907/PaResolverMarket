@@ -1,12 +1,12 @@
 package com.market.paresolvershop.di
 
-import io.github.jan_tennert.supabase.SupabaseClient
-import io.github.jan_tennert.supabase.auth.Auth
-import io.github.jan_tennert.supabase.createSupabaseClient
-import io.github.jan_tennert.supabase.postgrest.Postgrest
-import io.github.jan_tennert.supabase.realtime.Realtime
-import io.github.jan_tennert.supabase.serializer.KotlinXSerializer
-import io.github.jan_tennert.supabase.storage.Storage
+import io.github.jan.supabase.SupabaseClient
+import io.github.jan.supabase.auth.Auth
+import io.github.jan.supabase.createSupabaseClient
+import io.github.jan.supabase.postgrest.Postgrest
+import io.github.jan.supabase.realtime.Realtime
+import io.github.jan.supabase.serializer.KotlinXSerializer
+import io.github.jan.supabase.storage.Storage
 import kotlinx.serialization.json.Json
 import org.koin.dsl.module
 

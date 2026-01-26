@@ -2,7 +2,6 @@ package com.market.paresolvershop.data.model
 
 import com.market.paresolvershop.domain.model.CartItem
 
-// No-arg constructor para la deserialización de Firestore
 data class CartItemEntity(
     val product: ProductEntity = ProductEntity(),
     val quantity: Int = 0

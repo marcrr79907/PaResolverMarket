@@ -131,8 +131,12 @@ android {
             }
         }
         val webClientId = localProperties.getProperty("web_client_id") ?: ""
+        val supabaseUrl = localProperties.getProperty("supabase_url") ?: ""
+        val supabaseAnonKey = localProperties.getProperty("supabase_anon_key") ?: ""
 
         resValue("string", "web_client_id", webClientId)
+        resValue("string", "supabase_url", supabaseUrl)
+        resValue("string", "supabase_anon_key", supabaseAnonKey)
     }
     packaging {
         resources {
