@@ -3,7 +3,7 @@ package com.market.paresolvershop.data.model
 import com.market.paresolvershop.domain.model.Product
 
 /**
- * Clase que se mapea directamente a/desde Firestore.
+ * Clase que se mapea directamente a/desde Supabase.
  * */
 data class ProductEntity(
     val id: String = "",
@@ -11,7 +11,7 @@ data class ProductEntity(
     val description: String = "",
     val price: Double = 0.0,
     val stock: Int = 0,
-    val imageUrl: String = "",
+    val imageUrl: String? = null,
     val category: String = ""
 )
 

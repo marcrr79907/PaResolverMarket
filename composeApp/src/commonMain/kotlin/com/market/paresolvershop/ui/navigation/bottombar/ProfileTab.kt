@@ -68,13 +68,13 @@ object ProfileRootScreen : Screen {
                     onLogout = viewModel::logOut
                 )
             }
-            ProfileUiState.NotAuthenticated -> {
+            is ProfileUiState.NotAuthenticated -> {
                 GuestProfileScreen(
                     onLoginClick = { navigator.push(LoginScreen) },
                     onRegisterClick = { navigator.push(RegisterScreen) }
                 )
             }
-            ProfileUiState.Loading -> {
+            is ProfileUiState.Loading -> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }

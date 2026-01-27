@@ -1,21 +1,21 @@
 package com.market.paresolvershop.data.repository
 
-import com.market.paresolvershop.data.model.AuthUser
+import com.market.paresolvershop.data.model.AuthUserEntity
 import com.market.paresolvershop.domain.model.DataResult
 import kotlinx.coroutines.flow.Flow
 
 interface AuthRepository {
 
-    val authState: Flow<AuthUser?>
+    val authState: Flow<AuthUserEntity?>
 
-    fun getCurrentUser(): AuthUser?
+    fun getCurrentUser(): AuthUserEntity?
 
-    suspend fun signInWithEmailAndPassword(email: String, password: String): DataResult<AuthUser>
+    suspend fun signInWithEmailAndPassword(email: String, password: String): DataResult<AuthUserEntity>
 
     // Añadida la nueva función para el login con Google
-    suspend fun signInWithGoogle(idToken: String): DataResult<AuthUser>
+    suspend fun signInWithGoogle(idToken: String): DataResult<AuthUserEntity>
 
-    suspend fun signUp(name: String, email: String, password: String): DataResult<AuthUser>
+    suspend fun signUp(name: String, email: String, password: String): DataResult<AuthUserEntity>
 
     suspend fun signOut()
 

@@ -17,9 +17,12 @@ class ProductRepositoryImpl(
             val result = supabase.from("products")
                 .select()
                 .decodeList<Product>()
+            println("Products loaded: ${result.size}")
             emit(result)
         } catch (e: Exception) {
-            emit(emptyList())
+            println("Error loading products: ${e.message}")
+            e.printStackTrace()
+            throw e  // Propagar el error en lugar de emitir lista vacía
         }
     }
 

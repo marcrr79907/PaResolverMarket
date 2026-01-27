@@ -94,14 +94,16 @@ fun ProductCard(product: Product, onClick: () -> Unit) {
         ) {
             // Placeholder para la imagen
             Box(modifier = Modifier.size(60.dp).padding(end = 16.dp)) {
-                AsyncImage(
-                    model = product.imageUrl,
-                    contentDescription = "Imagen de ${product.name}",
-                    modifier = Modifier
-                        .size(80.dp)
-                        .padding(end = 16.dp),
-                    contentScale = ContentScale.Crop
-                )
+                if (product.imageUrl != null) {
+                    AsyncImage(
+                        model = product.imageUrl,
+                        contentDescription = "Imagen de ${product.name}",
+                        modifier = Modifier
+                            .size(80.dp)
+                            .padding(end = 16.dp),
+                        contentScale = ContentScale.Crop
+                    )
+                }
             }
             Column {
                 Text(product.name, style = MaterialTheme.typography.titleMedium)

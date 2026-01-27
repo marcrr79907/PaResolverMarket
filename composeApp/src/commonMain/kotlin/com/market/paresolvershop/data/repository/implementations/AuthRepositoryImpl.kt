@@ -1,6 +1,6 @@
 package com.market.paresolvershop.data.repository.implementations
 
-import com.market.paresolvershop.data.model.AuthUser
+import com.market.paresolvershop.data.model.AuthUserEntity
 import com.market.paresolvershop.data.repository.AuthRepository
 import com.market.paresolvershop.domain.model.DataResult
 import io.github.jan.supabase.SupabaseClient
@@ -10,8 +10,13 @@ import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.auth.providers.builtin.IDToken
 import io.github.jan.supabase.auth.status.SessionStatus
 import io.github.jan.supabase.postgrest.from
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -28,12 +33,42 @@ class AuthRepositoryImpl(
     private val supabase: SupabaseClient
 ) : AuthRepository {
 
+    private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    // El StateFlow es la fuente de verdad para toda la App (incluye el rol de la BD)
+    private val _currentUser = MutableStateFlow<AuthUserEntity?>(null)
+    override val authState: Flow<AuthUserEntity?> = _currentUser.asStateFlow()
+
+    init {
+        // Observamos el estado de la sesión globalmente
+        repositoryScope.launch {
+            supabase.auth.sessionStatus.collect { status ->
+                when (status) {
+                    is SessionStatus.Authenticated -> {
+                        val user = status.session.user
+                        if (user != null) {
+                            // Cuando hay sesión, vamos a buscar el perfil a la tabla 'users'
+                            fetchAndCacheProfile(
+                                userId = user.id,
+                                email = user.email ?: "",
+                                name = user.userMetadata?.get("name") as? String ?: ""
+                            )
+                        }
+                    }
+                    is SessionStatus.NotAuthenticated, is SessionStatus.RefreshFailure -> {
+                        _currentUser.value = null
+                    }
+                    else -> {}
+                }
+            }
+        }
+    }
+
     /**
-     * Obtiene o crea el perfil del usuario en la tabla 'users' de Supabase.
+     * Consulta la tabla 'users' de la base de datos pública para obtener el rol real.
      */
-    private suspend fun getOrCreateUserProfile(userId: String, email: String, name: String): AuthUser {
-        return try {
-            // Intentar obtener el perfil existente
+    private suspend fun fetchAndCacheProfile(userId: String, email: String, name: String) {
+        try {
             val profile = supabase.from("users")
                 .select {
                     filter { eq("id", userId) }
@@ -41,138 +76,62 @@ class AuthRepositoryImpl(
                 .decodeSingleOrNull<UserProfile>()
 
             if (profile != null) {
-                AuthUser(
+                _currentUser.value = AuthUserEntity(
                     id = profile.id,
                     email = profile.email,
                     name = profile.name,
-                    role = profile.role
+                    role = profile.role // Aquí ya vendrá "admin" si el trigger/DB lo tiene
                 )
             } else {
-                // Si no existe, crear nuevo perfil
-                val newProfile = UserProfile(
-                    id = userId,
-                    email = email,
-                    name = name,
-                    role = "client"
-                )
-                supabase.from("users").insert(newProfile)
-                
-                AuthUser(
-                    id = newProfile.id,
-                    email = newProfile.email,
-                    name = newProfile.name,
-                    role = newProfile.role
-                )
+                // Si por alguna razón el trigger falló o es muy lento, creamos un estado básico
+                _currentUser.value = AuthUserEntity(id = userId, email = email, name = name, role = "client")
             }
         } catch (e: Exception) {
-            // Si falla, imprimir el error y devolver usuario básico
-            println("ERROR al crear/obtener perfil de usuario: ${e.message}")
-            e.printStackTrace()
-            AuthUser(
-                id = userId,
-                email = email,
-                name = name,
-                role = "client"
-            )
+            _currentUser.value = AuthUserEntity(id = userId, email = email, name = name, role = "client")
         }
     }
 
-    override fun getCurrentUser(): AuthUser? {
-        val session = supabase.auth.currentSessionOrNull()
-        val user = session?.user ?: return null
-        
-        return AuthUser(
-            id = user.id,
-            email = user.email ?: "",
-            name = user.userMetadata?.get("name") as? String ?: "",
-            role = "client" // El rol se obtiene de forma asíncrona
-        )
-    }
+    override fun getCurrentUser(): AuthUserEntity? = _currentUser.value
 
-    override val authState: Flow<AuthUser?> = flow {
-        supabase.auth.sessionStatus.collect { status ->
-            when (status) {
-                is SessionStatus.Authenticated -> {
-                    val user = status.session.user
-                    val userId = user?.id
-                    if (userId != null) {
-                        val email = user.email ?: ""
-                        val name = user.userMetadata?.get("name") as? String ?: ""
-                        
-                        // Obtener perfil completo de la BD
-                        val authUser = getOrCreateUserProfile(userId, email, name)
-                        emit(authUser)
-                    } else {
-                        emit(null)
-                    }
-                }
-                is SessionStatus.NotAuthenticated -> {
-                    emit(null)
-                }
-                SessionStatus.Initializing -> {
-                    // No emitir nada durante inicialización
-                }
-                is SessionStatus.RefreshFailure -> {
-                    emit(null)
-                }
-            }
-        }
-    }
-
-    override suspend fun signInWithEmailAndPassword(email: String, password: String): DataResult<AuthUser> {
+    override suspend fun signInWithEmailAndPassword(email: String, password: String): DataResult<AuthUserEntity> {
         return try {
             supabase.auth.signInWith(Email) {
                 this.email = email
                 this.password = password
             }
-            
+            // Esperamos un momento a que el perfil se cargue desde la BD
             val user = supabase.auth.currentUserOrNull() ?: error("Usuario no encontrado")
-            val userId = user.id
-            val name = user.userMetadata?.get("name") as? String ?: ""
-            
-            val authUser = getOrCreateUserProfile(userId, user.email ?: email, name)
-            DataResult.Success(authUser)
+            fetchAndCacheProfile(user.id, user.email ?: email, "")
+            DataResult.Success(_currentUser.value!!)
         } catch (e: Exception) {
             DataResult.Error(e.message ?: "Error al iniciar sesión")
         }
     }
 
-    override suspend fun signInWithGoogle(idToken: String): DataResult<AuthUser> {
+    override suspend fun signInWithGoogle(idToken: String): DataResult<AuthUserEntity> {
         return try {
             supabase.auth.signInWith(IDToken) {
                 this.idToken = idToken
                 provider = Google
             }
-            
             val user = supabase.auth.currentUserOrNull() ?: error("Usuario no encontrado")
-            val userId = user.id ?: error("ID de usuario no disponible")
-            val email = user.email ?: ""
-            val name = user.userMetadata?.get("full_name") as? String 
-                ?: user.userMetadata?.get("name") as? String 
-                ?: ""
-            
-            val authUser = getOrCreateUserProfile(userId, email, name)
-            DataResult.Success(authUser)
+            fetchAndCacheProfile(user.id, user.email ?: "", "")
+            DataResult.Success(_currentUser.value!!)
         } catch (e: Exception) {
-            DataResult.Error(e.message ?: "Error al autenticar con Google")
+            DataResult.Error(e.message ?: "Error con Google")
         }
     }
 
-    override suspend fun signUp(name: String, email: String, password: String): DataResult<AuthUser> {
+    override suspend fun signUp(name: String, email: String, password: String): DataResult<AuthUserEntity> {
         return try {
             supabase.auth.signUpWith(Email) {
                 this.email = email
                 this.password = password
-                data = buildJsonObject {
-                    put("name", name)
-                }
+                data = buildJsonObject { put("name", name) }
             }
-            
             val user = supabase.auth.currentUserOrNull() ?: error("Usuario no encontrado")
-            val userId = user.id
-            val authUser = getOrCreateUserProfile(userId, email, name)
-            
-            DataResult.Success(authUser)
+            fetchAndCacheProfile(user.id, email, name)
+            DataResult.Success(_currentUser.value!!)
         } catch (e: Exception) {
             DataResult.Error(e.message ?: "Error en el registro")
         }
@@ -180,5 +139,6 @@ class AuthRepositoryImpl(
 
     override suspend fun signOut() {
         supabase.auth.signOut()
+        _currentUser.value = null
     }
 }

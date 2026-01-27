@@ -2,7 +2,7 @@ package com.market.paresolvershop.ui.profilemagnament
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.market.paresolvershop.data.model.AuthUser
+import com.market.paresolvershop.data.model.AuthUserEntity
 import com.market.paresolvershop.domain.auth.ObserveAuthState
 import com.market.paresolvershop.domain.auth.SignOut
 import kotlinx.coroutines.flow.SharingStarted
@@ -16,7 +16,7 @@ import kotlinx.coroutines.launch
 sealed interface ProfileUiState {
     data object Loading : ProfileUiState
     data object NotAuthenticated : ProfileUiState
-    data class Authenticated(val user: AuthUser, val isAdmin: Boolean = user.role == "admin") : ProfileUiState
+    data class Authenticated(val user: AuthUserEntity, val isAdmin: Boolean = user.role == "admin") : ProfileUiState
     data class Error(val message: String) : ProfileUiState // Estado de error añadido
 }
 
