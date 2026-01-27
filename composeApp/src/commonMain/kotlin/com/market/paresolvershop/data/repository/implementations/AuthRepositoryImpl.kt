@@ -65,7 +65,9 @@ class AuthRepositoryImpl(
                 )
             }
         } catch (e: Exception) {
-            // Si falla, devolver usuario básico sin rol de BD
+            // Si falla, imprimir el error y devolver usuario básico
+            println("ERROR al crear/obtener perfil de usuario: ${e.message}")
+            e.printStackTrace()
             AuthUser(
                 id = userId,
                 email = email,

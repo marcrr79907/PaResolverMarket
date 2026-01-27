@@ -32,8 +32,11 @@ actual fun GoogleAuthUiProvider(
 
     content {
         scope.launch {
+            Log.d("GoogleAuth", "Iniciando flujo de Google Sign-In...")
+            Log.d("GoogleAuth", "Web Client ID: ${context.getString(R.string.web_client_id)}")
             try {
                 // 1. PRIMER INTENTO: Buscar cuentas ya autorizadas.
+                Log.d("GoogleAuth", "Primer intento: Buscando cuentas autorizadas...")
                 val result = getGoogleCredential(credentialManager, context, filterByAuthorizedAccounts = true)
                 // CAMBIO: Manejamos el caso de que el resultado sea nulo (tipo de credencial inesperado)
                 if (result != null) {

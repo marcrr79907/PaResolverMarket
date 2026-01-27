@@ -1,5 +1,6 @@
 package com.market.paresolvershop.di
 
+import com.market.paresolvershop.config.SupabaseConfig
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.createSupabaseClient
@@ -13,8 +14,8 @@ import org.koin.dsl.module
 val supabaseModule = module {
     single<SupabaseClient> {
         createSupabaseClient(
-            supabaseUrl = "https://your-project.supabase.co", // TODO: Reemplazar con tu URL
-            supabaseKey = "your-anon-key" // TODO: Reemplazar con tu Anon Key
+            supabaseUrl = SupabaseConfig.supabaseUrl,
+            supabaseKey = SupabaseConfig.supabaseAnonKey
         ) {
             install(Auth)
             install(Postgrest)

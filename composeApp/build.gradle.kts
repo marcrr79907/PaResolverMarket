@@ -1,6 +1,6 @@
+import org.gradle.declarative.dsl.schema.FqName.Empty.packageName
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.util.Properties
-
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidApplication)
@@ -134,10 +134,16 @@ android {
         val supabaseUrl = localProperties.getProperty("supabase_url") ?: ""
         val supabaseAnonKey = localProperties.getProperty("supabase_anon_key") ?: ""
 
+        buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
+        buildConfigField("String", "SUPABASE_ANON_KEY", "\"$supabaseAnonKey\"")
+        buildConfigField("String", "WEB_CLIENT_ID", "\"$webClientId\"")
+        
         resValue("string", "web_client_id", webClientId)
-        resValue("string", "supabase_url", supabaseUrl)
-        resValue("string", "supabase_anon_key", supabaseAnonKey)
     }
+    buildFeatures {
+        buildConfig = true
+    }
+    
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
@@ -157,3 +163,4 @@ android {
 dependencies {
     debugImplementation(compose.uiTooling)
 }
+
