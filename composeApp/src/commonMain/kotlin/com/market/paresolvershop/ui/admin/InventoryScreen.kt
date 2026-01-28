@@ -51,7 +51,7 @@ object InventoryScreen : Screen {
         showDeleteDialog?.let {
             DeleteConfirmationDialog(
                 productName = it.name,
-                onConfirm = { viewModel.deleteProduct(it.id) },
+                onConfirm = { viewModel.deleteProduct(it) },
                 onDismiss = { showDeleteDialog = null }
             )
         }

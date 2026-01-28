@@ -10,7 +10,7 @@ class StorageRepositoryImpl(
     private val supabase: SupabaseClient
 ) : StorageRepository {
 
-    private val bucketName = "product_images" // Nombre del bucket en Supabase Storage
+    private val bucketName = "product_images"
 
     override suspend fun uploadImage(bytes: ByteArray, baseNameHint: String): DataResult<String> {
         if (bytes.isEmpty()) return DataResult.Success("")
@@ -36,12 +36,22 @@ class StorageRepositoryImpl(
                 data = optimizedBytes
             )
 
-            // Obtener la URL pública
             val publicUrl = supabase.storage[bucketName].publicUrl(uniqueFileName)
-
             DataResult.Success(publicUrl)
         } catch (e: Exception) {
             DataResult.Error(e.message ?: "Error al subir la imagen")
         }
+    }
+
+    override suspend fun deleteImage(imageUrl: String): DataResult<Unit> = runCatching {
+        // Extraer el nombre del archivo de la URL pública de Supabase
+        // Ejem: .../storage/v1/object/public/product_images/nombre_archivo.jpg
+        val fileName = imageUrl.substringAfterLast("/")
+        if (fileName.isNotEmpty() && imageUrl.contains(bucketName)) {
+            supabase.storage[bucketName].delete(listOf(fileName))
+        }
+        DataResult.Success(Unit)
+    }.getOrElse {
+        DataResult.Error(it.message ?: "Error al eliminar la imagen antigua")
     }
 }

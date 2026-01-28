@@ -14,24 +14,33 @@ class UpdateProductUseCase(
         newImageBytes: ByteArray? // Null if the image is not being changed
     ): DataResult<Unit> {
         return try {
-            // 1. If there's a new image, upload it first
-            val imageUrl = if (newImageBytes != null && newImageBytes.isNotEmpty()) {
-                when (val uploadResult = storageRepository.uploadImage(newImageBytes, product.name)) {
-                    is DataResult.Success -> uploadResult.data
-                    is DataResult.Error -> return uploadResult // Propagate the error
+            val oldImageUrl = product.imageUrl
+            var finalImageUrl = oldImageUrl
+            var hasNewImage = false
+
+            // If there's a new image, upload it first
+            if (newImageBytes != null && newImageBytes.isNotEmpty()) {
+                val uploadResult = storageRepository.uploadImage(newImageBytes, product.name)
+                if (uploadResult is DataResult.Success) {
+                    finalImageUrl = uploadResult.data
+                    hasNewImage = true
+                } else {
+                    return uploadResult as DataResult.Error
                 }
-            } else {
-                product.imageUrl // Keep the old image URL
             }
 
-            // 2. Create the updated product object
-            val updatedProduct = product.copy(imageUrl = imageUrl)
+            val updatedProduct = product.copy(imageUrl = finalImageUrl)
+            val dbResult = productRepository.updateProduct(updatedProduct)
 
-            // 3. Update the product in the repository
-            productRepository.updateProduct(updatedProduct)
+            if (dbResult is DataResult.Success && hasNewImage && !oldImageUrl.isNullOrEmpty()) {
+                // Delete old image for clean
+                storageRepository.deleteImage(oldImageUrl)
+            }
+
+            dbResult
 
         } catch (e: Exception) {
-            DataResult.Error(e.message ?: "Error desconocido al actualizar el producto")
+            DataResult.Error(e.message ?: "Error al actualizar producto")
         }
     }
 }

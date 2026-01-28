@@ -15,4 +15,5 @@ interface StorageRepository {
      * o un error si falla.
      */
     suspend fun uploadImage(bytes: ByteArray, baseNameHint: String): DataResult<String>
+    suspend fun deleteImage(imageUrl: String): DataResult<Unit>
 }

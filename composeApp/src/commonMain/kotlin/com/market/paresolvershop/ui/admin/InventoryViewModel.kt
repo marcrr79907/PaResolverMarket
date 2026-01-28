@@ -55,10 +55,10 @@ class InventoryViewModel(
             .launchIn(viewModelScope)
     }
 
-    fun deleteProduct(productId: String) {
+    fun deleteProduct(product: Product) {
         viewModelScope.launch {
             _deleteState.value = DeleteProductState.Loading
-            when (val result = deleteProductUseCase(productId)) {
+            when (val result = deleteProductUseCase(product)) {
                 is DataResult.Success -> {
                     _deleteState.value = DeleteProductState.Success
                     // No es necesario recargar la lista, el Flow la actualizará automáticamente.
