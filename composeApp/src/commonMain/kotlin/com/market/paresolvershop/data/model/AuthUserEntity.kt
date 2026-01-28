@@ -7,5 +7,5 @@ data class AuthUserEntity(
     val id: String,
     val email: String,
     val name: String,
-    val role: String = "client"
+    val role: String
 )

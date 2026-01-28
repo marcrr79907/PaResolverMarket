@@ -3,6 +3,7 @@ package com.market.paresolvershop.ui.authentication
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.market.paresolvershop.data.model.AuthUserEntity
 import com.market.paresolvershop.domain.auth.SignInWithEmail
 import com.market.paresolvershop.domain.auth.SignInWithGoogle
 import com.market.paresolvershop.domain.model.DataResult
@@ -14,7 +15,7 @@ import kotlinx.coroutines.launch
 sealed interface LoginUiState {
     data object Idle : LoginUiState
     data object Loading : LoginUiState
-    data object Success : LoginUiState
+    data class Success(val user: AuthUserEntity) : LoginUiState
     data class Error(val message: String) : LoginUiState
 }
 
@@ -31,19 +32,19 @@ class LoginViewModel(
             _uiState.value = LoginUiState.Loading
             val result = signInWithEmail(email, password)
             _uiState.value = when (result) {
-                is DataResult.Success -> LoginUiState.Success
+                is DataResult.Success -> LoginUiState.Success(result.data)
                 is DataResult.Error -> LoginUiState.Error(result.message)
             }
         }
     }
 
-    // Nueva función para manejar el login con Google
+    // Mnejar el login con Google
     fun onGoogleLoginSuccess(idToken: String) {
         viewModelScope.launch {
             _uiState.value = LoginUiState.Loading
             val result = signInWithGoogle(idToken)
             _uiState.value = when (result) {
-                is DataResult.Success -> LoginUiState.Success
+                is DataResult.Success -> LoginUiState.Success(result.data)
                 is DataResult.Error -> LoginUiState.Error(result.message)
             }
         }
