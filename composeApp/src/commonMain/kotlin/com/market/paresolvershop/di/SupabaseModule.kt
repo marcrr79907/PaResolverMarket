@@ -17,7 +17,9 @@ val supabaseModule = module {
             supabaseUrl = SupabaseConfig.supabaseUrl,
             supabaseKey = SupabaseConfig.supabaseAnonKey
         ) {
-            install(Auth)
+            install(Auth) {
+
+            }
             install(Postgrest)
             install(Storage)
             install(Realtime)

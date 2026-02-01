@@ -19,7 +19,6 @@ sealed interface RegisterUiState {
 
 class RegisterViewModel(
     private val signUpWithEmail: SignUpWithEmail,
-    // 1. Inyectamos el caso de uso para el login/registro con Google
     private val signInWithGoogle: SignInWithGoogle
 ) : ViewModel() {
 
@@ -47,11 +46,11 @@ class RegisterViewModel(
     }
 
     // 2. Nueva función para manejar el flujo de Google
-    fun onGoogleRegisterSuccess(idToken: String) {
+    fun onGoogleRegisterSuccess(idToken: String, nonce: String?) {
         viewModelScope.launch {
             _uiState.value = RegisterUiState.Loading
             // Reutilizamos el mismo caso de uso que el Login, ya que Firebase crea la cuenta si no existe.
-            val result = signInWithGoogle(idToken)
+            val result = signInWithGoogle(idToken, nonce)
             _uiState.value = when (result) {
                 is DataResult.Success -> RegisterUiState.Success
                 is DataResult.Error -> RegisterUiState.Error(result.message)

@@ -114,10 +114,11 @@ class AuthRepositoryImpl(
         }
     }
 
-    override suspend fun signInWithGoogle(idToken: String): DataResult<AuthUserEntity> {
+    override suspend fun signInWithGoogle(idToken: String, nonce: String?): DataResult<AuthUserEntity> {
         return try {
             supabase.auth.signInWith(IDToken) {
                 this.idToken = idToken
+                this.nonce = nonce
                 provider = Google
             }
 
@@ -131,7 +132,7 @@ class AuthRepositoryImpl(
         }
     }
 
-    override suspend fun signUp(name: String, email: String, password: String): DataResult<AuthUserEntity> {
+    override suspend fun signUpWithEmail(name: String, email: String, password: String): DataResult<AuthUserEntity> {
         return try {
             supabase.auth.signUpWith(Email) {
                 this.email = email

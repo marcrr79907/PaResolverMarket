@@ -15,7 +15,7 @@ import kotlinx.coroutines.launch
 sealed interface LoginUiState {
     data object Idle : LoginUiState
     data object Loading : LoginUiState
-    data class Success(val user: AuthUserEntity) : LoginUiState
+    data object Success: LoginUiState
     data class Error(val message: String) : LoginUiState
 }
 
@@ -32,19 +32,20 @@ class LoginViewModel(
             _uiState.value = LoginUiState.Loading
             val result = signInWithEmail(email, password)
             _uiState.value = when (result) {
-                is DataResult.Success -> LoginUiState.Success(result.data)
+                is DataResult.Success -> LoginUiState.Success
                 is DataResult.Error -> LoginUiState.Error(result.message)
             }
         }
     }
 
     // Mnejar el login con Google
-    fun onGoogleLoginSuccess(idToken: String) {
+    fun onGoogleLoginSuccess(idToken: String, nonce: String?) {
         viewModelScope.launch {
             _uiState.value = LoginUiState.Loading
-            val result = signInWithGoogle(idToken)
+
+            val result = signInWithGoogle(idToken, nonce)
             _uiState.value = when (result) {
-                is DataResult.Success -> LoginUiState.Success(result.data)
+                is DataResult.Success -> LoginUiState.Success
                 is DataResult.Error -> LoginUiState.Error(result.message)
             }
         }

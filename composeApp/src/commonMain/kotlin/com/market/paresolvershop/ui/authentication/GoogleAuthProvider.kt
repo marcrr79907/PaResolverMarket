@@ -12,6 +12,6 @@ import androidx.compose.runtime.Composable
  */
 @Composable
 expect fun GoogleAuthUiProvider(
-    onGoogleSignInResult: (idToken: String?) -> Unit,
+    onGoogleSignInResult: (idToken: String?, nonce: String?) -> Unit,
     content: @Composable (onClick: () -> Unit) -> Unit
 )

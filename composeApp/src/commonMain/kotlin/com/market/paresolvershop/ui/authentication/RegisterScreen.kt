@@ -53,9 +53,21 @@ object RegisterScreen : Screen {
             Spacer(modifier = Modifier.height(8.dp))
             TextField(value = email, onValueChange = { email = it }, label = { Text("Email") }, modifier = Modifier.fillMaxWidth())
             Spacer(modifier = Modifier.height(8.dp))
-            TextField(value = password, onValueChange = { password = it }, label = { Text("Contraseña") }, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
+            TextField(
+                value = password,
+                onValueChange = { password = it },
+                label = { Text("Contraseña") },
+                visualTransformation = PasswordVisualTransformation(),
+                modifier = Modifier.fillMaxWidth()
+            )
             Spacer(modifier = Modifier.height(8.dp))
-            TextField(value = confirmPassword, onValueChange = { confirmPassword = it }, label = { Text("Confirmar Contraseña") }, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
+            TextField(
+                value = confirmPassword,
+                onValueChange = { confirmPassword = it },
+                label = { Text("Confirmar Contraseña") },
+                visualTransformation = PasswordVisualTransformation(),
+                modifier = Modifier.fillMaxWidth()
+            )
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -83,12 +95,12 @@ object RegisterScreen : Screen {
 
             // 4. El botón de Google ahora llama al RegisterViewModel
             GoogleAuthUiProvider(
-                onGoogleSignInResult = { idToken ->
+                onGoogleSignInResult = { idToken, nonce ->
                     if (idToken != null) {
                         // Llamamos a la nueva función en nuestro ViewModel
-                        viewModel.onGoogleRegisterSuccess(idToken)
+                        viewModel.onGoogleRegisterSuccess(idToken, nonce)
                     } else {
-                        viewModel.onError("El registro con Google fue cancelado.")
+                        viewModel.onError("El registro con Google fue canceladooooo.")
                     }
                 }
             ) { onClickLambda ->

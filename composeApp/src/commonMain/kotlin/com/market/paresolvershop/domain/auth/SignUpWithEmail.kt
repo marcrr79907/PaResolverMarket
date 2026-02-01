@@ -12,5 +12,5 @@ class SignUpWithEmail(private val repository: AuthRepository) {
      * @param password La contraseña.
      * @return AuthResult (Success o Error).
      */
-    suspend operator fun invoke(name: String, email: String, password: String) = repository.signUp(name, email, password)
+    suspend operator fun invoke(name: String, email: String, password: String) = repository.signUpWithEmail(name, email, password)
 }

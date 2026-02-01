@@ -10,13 +10,7 @@ import androidx.compose.runtime.Composable
  */
 @Composable
 actual fun GoogleAuthUiProvider(
-    onGoogleSignInResult: (idToken: String?) -> Unit,
-    content: @Composable (onClick: () -> Unit) -> Unit
+    onGoogleSignInResult: (idToken: String?, nonce: String?) -> Unit,
+    content: @Composable ((onClick: () -> Unit) -> Unit)
 ) {
-    // Renderizar el botón pero deshabilitado/con mensaje para iOS
-    content {
-        // TODO: Implementar Google Sign-In para iOS
-        // Mientras tanto, notificar que no está disponible
-        onGoogleSignInResult(null)
-    }
 }

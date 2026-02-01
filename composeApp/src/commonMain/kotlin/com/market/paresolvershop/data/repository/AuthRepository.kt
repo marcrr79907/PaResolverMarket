@@ -13,9 +13,9 @@ interface AuthRepository {
     suspend fun signInWithEmailAndPassword(email: String, password: String): DataResult<AuthUserEntity>
 
     // Añadida la nueva función para el login con Google
-    suspend fun signInWithGoogle(idToken: String): DataResult<AuthUserEntity>
+    suspend fun signInWithGoogle(idToken: String, nonce: String?): DataResult<AuthUserEntity>
 
-    suspend fun signUp(name: String, email: String, password: String): DataResult<AuthUserEntity>
+    suspend fun signUpWithEmail(name: String, email: String, password: String): DataResult<AuthUserEntity>
 
     suspend fun signOut()
 

@@ -13,6 +13,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -25,13 +26,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import compose.icons.FontAwesomeIcons
 import compose.icons.fontawesomeicons.Brands
+import compose.icons.fontawesomeicons.Solid
 import compose.icons.fontawesomeicons.brands.Google
+import compose.icons.fontawesomeicons.solid.Eye
+import compose.icons.fontawesomeicons.solid.EyeSlash
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.annotation.KoinExperimentalAPI
 
@@ -44,8 +50,9 @@ object LoginScreen : Screen {
         val viewModel = koinViewModel<LoginViewModel>()
         val state by viewModel.uiState.collectAsState()
 
-        var email by remember { mutableStateOf("marc@gmail.com") }
-        var password by remember { mutableStateOf("123456") }
+        var email by remember { mutableStateOf("") }
+        var password by remember { mutableStateOf("") }
+        var passwordVisible by remember { mutableStateOf(false) }
 
         LaunchedEffect(state) {
             if (state is LoginUiState.Success) {
@@ -61,9 +68,32 @@ object LoginScreen : Screen {
             Text("Iniciar Sesión", style = MaterialTheme.typography.headlineMedium)
             Spacer(Modifier.height(32.dp))
 
-            TextField(value = email, onValueChange = { email = it }, label = { Text("Email") }, modifier = Modifier.fillMaxWidth())
+            TextField(
+                value = email,
+                onValueChange = { email = it },
+                label = { Text("Email") },
+                modifier = Modifier.fillMaxWidth()
+            )
             Spacer(Modifier.height(8.dp))
-            TextField(value = password, onValueChange = { password = it }, label = { Text("Contraseña") }, modifier = Modifier.fillMaxWidth())
+            TextField(
+                value = password,
+                onValueChange = { password = it },
+                label = { Text("Contraseña") },
+                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                trailingIcon = {
+                    val icon = if (passwordVisible) FontAwesomeIcons.Solid.EyeSlash else FontAwesomeIcons.Solid.Eye
+                    val description = if (passwordVisible) "Ocultar contraseña" else "Mostrar contraseña"
+
+                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = description,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
 
             Spacer(Modifier.height(16.dp))
 
@@ -90,18 +120,14 @@ object LoginScreen : Screen {
             // Sign-in with Google
             GoogleAuthUiProvider(
                 // Cuando el proveedor de la plataforma (Android) nos devuelva el token...
-                onGoogleSignInResult = { idToken ->
+                onGoogleSignInResult = { idToken, nonce ->
                     if (idToken != null) {
-                        // ...se lo pasamos al ViewModel para que inicie sesión en Firebase.
-                        viewModel.onGoogleLoginSuccess(idToken)
+                        viewModel.onGoogleLoginSuccess(idToken, nonce)
                     } else {
-                        // Si el token es nulo, el usuario canceló o hubo un error.
                         viewModel.onError("El inicio de sesión con Google fue cancelado.")
                     }
                 }
             ) { onClickLambda ->
-                // Este es el Composable que se mostrará en la pantalla.
-                // La lambda 'onClick' que recibimos es la que debemos llamar para lanzar el flujo de Google.
                 Button(
                     onClick = onClickLambda,
                     modifier = Modifier.fillMaxWidth(),
