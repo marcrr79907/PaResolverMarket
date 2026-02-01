@@ -49,8 +49,13 @@ class AuthRepositoryImpl(
                         val user = status.session.user
                         if (user != null) {
                             // Sincronizamos con la tabla 'users' de la base de datos
-                            val profile = fetchProfileFromDb(user.id)
-                            _currentUser.value = profile
+                            try {
+                                val profile = fetchProfileFromDb(user.id)
+                                _currentUser.value = profile
+                            } catch (e: Exception) {
+                                // Si no se encuentra el perfil aún (ej. trigger lento), no limpiamos el estado aún
+                                // El retry de fetchProfileFromDb ya hace su trabajo
+                            }
                         }
                     }
                     is SessionStatus.NotAuthenticated, is SessionStatus.RefreshFailure -> {
@@ -62,10 +67,6 @@ class AuthRepositoryImpl(
         }
     }
 
-    /**
-     * Consulta la tabla 'users' con reintentos para dar tiempo al Trigger de la DB.
-     * Si falla tras los reintentos, lanza una excepción que será capturada por el ViewModel.
-     */
     private suspend fun fetchProfileFromDb(userId: String): AuthUserEntity {
         var profile: UserProfile? = null
         var lastError: String? = null
@@ -92,7 +93,7 @@ class AuthRepositoryImpl(
                 name = it.name,
                 role = it.role
             )
-        } ?: throw Exception(lastError ?: "No se encontró el perfil de usuario en la base de datos tras el registro/login.")
+        } ?: throw Exception(lastError ?: "No se encontró el perfil de usuario.")
     }
 
     override fun getCurrentUser(): AuthUserEntity? = _currentUser.value
@@ -110,7 +111,7 @@ class AuthRepositoryImpl(
             _currentUser.value = profile
             DataResult.Success(profile)
         } catch (e: Exception) {
-            DataResult.Error(e.message ?: "Error al iniciar sesión")
+            DataResult.Error(mapAuthError(e))
         }
     }
 
@@ -128,7 +129,7 @@ class AuthRepositoryImpl(
             _currentUser.value = profile
             DataResult.Success(profile)
         } catch (e: Exception) {
-            DataResult.Error(e.message ?: "Error al autenticar con Google")
+            DataResult.Error(mapAuthError(e))
         }
     }
 
@@ -142,18 +143,36 @@ class AuthRepositoryImpl(
                 }
             }
 
-            val user = supabase.auth.currentUserOrNull() ?: error("Usuario no encontrado")
-            val profile = fetchProfileFromDb(user.id)
+            // Si la confirmación de email está activa, el currentUser será null o no tendrá sesión.
+            // Manejamos eso devolviendo un éxito pero informando al usuario.
+            val user = supabase.auth.currentUserOrNull()
+            if (user == null || user.identities.isNullOrEmpty()) {
+                return DataResult.Success(AuthUserEntity("", email, name, "customer"))
+            }
 
+            val profile = fetchProfileFromDb(user.id)
             _currentUser.value = profile
             DataResult.Success(profile)
         } catch (e: Exception) {
-            DataResult.Error(e.message ?: "Error en el registro")
+            DataResult.Error(mapAuthError(e))
         }
     }
 
     override suspend fun signOut() {
         supabase.auth.signOut()
         _currentUser.value = null
+    }
+
+    private fun mapAuthError(e: Exception): String {
+        val message = e.message ?: ""
+        return when {
+            message.contains("invalid_credentials", true) -> "Email o contraseña incorrectos."
+            message.contains("Email not confirmed", true) -> "Por favor, confirma tu cuenta en tu correo electrónico."
+            message.contains("rate_limit", true) -> "Demasiados intentos. Por favor, espera un momento."
+            message.contains("already registered", true) -> "Este correo electrónico ya está registrado."
+            message.contains("network", true) -> "Sin conexión a internet. Revisa tu red."
+            message.contains("Invalid login credentials", true) -> "Credenciales inválidas."
+            else -> "Ocurrió un error inesperado. Inténtalo de nuevo."
+        }
     }
 }
