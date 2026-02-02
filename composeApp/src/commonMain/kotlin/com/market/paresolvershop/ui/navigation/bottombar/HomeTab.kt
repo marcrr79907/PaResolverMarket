@@ -1,4 +1,4 @@
-package com.market.paresolver.ui.navigation.bottombar
+package com.market.paresolvershop.ui.navigation.bottombar
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -8,8 +8,8 @@ import cafe.adriel.voyager.navigator.tab.Tab
 import cafe.adriel.voyager.navigator.tab.TabOptions
 import com.market.paresolvershop.ui.products.CatalogScreen
 import compose.icons.FontAwesomeIcons
-import compose.icons.fontawesomeicons.Solid
-import compose.icons.fontawesomeicons.solid.Home
+import compose.icons.fontawesomeicons.Regular
+import compose.icons.fontawesomeicons.regular.Compass
 import org.koin.core.annotation.KoinExperimentalAPI
 
 object HomeTab : Tab {
@@ -17,7 +17,7 @@ object HomeTab : Tab {
         @Composable
         get() {
             val title = "Inicio"
-            val icon = rememberVectorPainter(FontAwesomeIcons.Solid.Home)
+            val icon = rememberVectorPainter(FontAwesomeIcons.Regular.Compass)
 
             return remember {
                 TabOptions(

@@ -1,7 +1,6 @@
 package com.market.paresolvershop.ui.navigation.bottombar
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -14,7 +13,6 @@ import cafe.adriel.voyager.navigator.tab.CurrentTab
 import cafe.adriel.voyager.navigator.tab.LocalTabNavigator
 import cafe.adriel.voyager.navigator.tab.Tab
 import cafe.adriel.voyager.navigator.tab.TabNavigator
-import com.market.paresolver.ui.navigation.bottombar.HomeTab
 import com.market.paresolvershop.ui.theme.AppShapes
 import com.market.paresolvershop.ui.theme.Primary
 
@@ -34,6 +32,7 @@ class BottomBarScreen : Screen {
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 16.dp)
+                            .navigationBarsPadding()
                             .height(70.dp)
                             .clip(AppShapes.large),
                         color = Primary,
