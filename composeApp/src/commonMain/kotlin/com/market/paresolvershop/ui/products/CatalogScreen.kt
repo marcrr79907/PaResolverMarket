@@ -3,14 +3,34 @@ package com.market.paresolvershop.ui.products
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -24,13 +44,24 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import coil3.compose.AsyncImage
 import com.market.paresolvershop.domain.model.Product
-import com.market.paresolvershop.ui.profilemagnament.ProfileViewModel
 import com.market.paresolvershop.ui.profilemagnament.ProfileUiState
+import com.market.paresolvershop.ui.profilemagnament.ProfileViewModel
 import com.market.paresolvershop.ui.theme.Inter
+import com.market.paresolvershop.ui.theme.Primary
 import com.market.paresolvershop.ui.theme.SpaceGrotesk
+import com.market.paresolvershop.ui.theme.Surface
+import com.market.paresolvershop.ui.theme.SurfaceVariant
 import compose.icons.FontAwesomeIcons
 import compose.icons.fontawesomeicons.Solid
-import compose.icons.fontawesomeicons.solid.*
+import compose.icons.fontawesomeicons.solid.Bell
+import compose.icons.fontawesomeicons.solid.Camera
+import compose.icons.fontawesomeicons.solid.Gamepad
+import compose.icons.fontawesomeicons.solid.Headphones
+import compose.icons.fontawesomeicons.solid.Heart
+import compose.icons.fontawesomeicons.solid.Laptop
+import compose.icons.fontawesomeicons.solid.MobileAlt
+import compose.icons.fontawesomeicons.solid.Search
+import compose.icons.fontawesomeicons.solid.Star
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.annotation.KoinExperimentalAPI
 
@@ -50,30 +81,27 @@ object CatalogScreen : Screen {
             else -> "Invitado"
         }
 
-        Scaffold(
-            bottomBar = { BottomNavigationBar() }
-        ) { paddingValues ->
-            Box(modifier = Modifier.padding(paddingValues).fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-                when (uiState) {
-                    is CatalogUiState.Loading -> {
-                        CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-                    }
-                    is CatalogUiState.Success -> {
-                        CatalogGridContent(
-                            userName = userName,
-                            products = (uiState as CatalogUiState.Success).products,
-                            onProductClick = { productId ->
-                                navigator.push(ProductDetailScreen(productId))
-                            }
-                        )
-                    }
-                    is CatalogUiState.Error -> {
-                        Text(
-                            text = (uiState as CatalogUiState.Error).message,
-                            color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.align(Alignment.Center)
-                        )
-                    }
+        // Eliminamos Scaffold y BottomNavigationBar manual
+        Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+            when (uiState) {
+                is CatalogUiState.Loading -> {
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                }
+                is CatalogUiState.Success -> {
+                    CatalogGridContent(
+                        userName = userName,
+                        products = (uiState as CatalogUiState.Success).products,
+                        onProductClick = { productId ->
+                            navigator.push(ProductDetailScreen(productId))
+                        }
+                    )
+                }
+                is CatalogUiState.Error -> {
+                    Text(
+                        text = (uiState as CatalogUiState.Error).message,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.align(Alignment.Center)
+                    )
                 }
             }
         }
@@ -238,7 +266,7 @@ fun CategoriesSection() {
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text("Categorías", fontFamily = SpaceGrotesk, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-            Text("Ver todo", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
+            Text("Ver todo", color = Primary, style = MaterialTheme.typography.labelLarge)
         }
         LazyRow(
             contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
@@ -248,8 +276,8 @@ fun CategoriesSection() {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Surface(
                         shape = RoundedCornerShape(12.dp),
-                        color = if (category.first == "PC") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
-                        border = if (category.first == "PC") null else BorderStroke(1.dp, MaterialTheme.colorScheme.surfaceVariant),
+                        color = if (category.first == "PC") Primary else Surface,
+                        border = if (category.first == "PC") null else BorderStroke(1.dp, SurfaceVariant),
                         modifier = Modifier.size(60.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
@@ -328,37 +356,6 @@ fun ProductGridItem(product: Product, modifier: Modifier = Modifier, onClick: ()
                     )
                 }
             }
-        }
-    }
-}
-
-@Composable
-fun BottomNavigationBar() {
-    NavigationBar(
-        containerColor = Color.White,
-        tonalElevation = 8.dp
-    ) {
-        val items = listOf(
-            Triple("Explorar", FontAwesomeIcons.Solid.Compass, true),
-            Triple("Carrito", FontAwesomeIcons.Solid.ShoppingCart, false),
-            Triple("Deseos", FontAwesomeIcons.Solid.Heart, false),
-            Triple("Pedidos", FontAwesomeIcons.Solid.ClipboardList, false),
-            Triple("Perfil", FontAwesomeIcons.Solid.User, false)
-        )
-        items.forEach { (label, icon, selected) ->
-            NavigationBarItem(
-                selected = selected,
-                onClick = { },
-                icon = { Icon(imageVector = icon, contentDescription = label, modifier = Modifier.size(20.dp)) },
-                label = { Text(label, fontSize = 10.sp) },
-                colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = MaterialTheme.colorScheme.primary,
-                    selectedTextColor = MaterialTheme.colorScheme.primary,
-                    unselectedIconColor = Color.Gray,
-                    unselectedTextColor = Color.Gray,
-                    indicatorColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
-                )
-            )
         }
     }
 }

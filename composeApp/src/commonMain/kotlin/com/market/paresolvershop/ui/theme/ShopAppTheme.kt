@@ -23,8 +23,7 @@ private val LightColorTheme = lightColorScheme(
     onSurface = OnSurface,
     surfaceVariant = SurfaceVariant,
     onSurfaceVariant = OnSurfaceVariant,
-    error = Error,
-    success = Success
+    error = Error
 )
 
 // Mantenemos tu lógica de colores extendidos si la usas en otros sitios, 
@@ -41,11 +40,7 @@ val ColorScheme.extraColor: Color @Composable get() = extendedColor(
 
 // Ajustamos los shapes para que sean más redondeados y modernos como en la imagen
 val AppShapes = Shapes(
-    extraSmall = RoundedCornerShape(8.dp),
-    small = RoundedCornerShape(12.dp),
-    medium = RoundedCornerShape(16.dp),
-    large = RoundedCornerShape(24.dp),
-    extraLarge = RoundedCornerShape(32.dp)
+    extraSmall = RoundedCornerShape(8.dp), small = RoundedCornerShape(12.dp), medium = RoundedCornerShape(16.dp), large = RoundedCornerShape(24.dp), extraLarge = RoundedCornerShape(32.dp)
 )
 
 @Composable

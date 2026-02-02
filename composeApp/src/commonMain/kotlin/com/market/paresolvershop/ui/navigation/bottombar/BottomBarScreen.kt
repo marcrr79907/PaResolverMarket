@@ -1,51 +1,56 @@
 package com.market.paresolvershop.ui.navigation.bottombar
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.tab.CurrentTab
 import cafe.adriel.voyager.navigator.tab.LocalTabNavigator
 import cafe.adriel.voyager.navigator.tab.Tab
 import cafe.adriel.voyager.navigator.tab.TabNavigator
 import com.market.paresolver.ui.navigation.bottombar.HomeTab
+import com.market.paresolvershop.ui.theme.AppShapes
+import com.market.paresolvershop.ui.theme.Primary
 
 class BottomBarScreen : Screen {
-    @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     override fun Content() {
-        // Usamos HomeTab como la pestaña inicial
-        TabNavigator(HomeTab) { tabNavigator ->
+        TabNavigator(HomeTab) {
             Scaffold(
-                topBar = {
-                    TopAppBar(
-                        title = { Text(tabNavigator.current.options.title) }
-                    )
-                },
-                content = {
-                    Box(modifier = Modifier.padding(it)) {
-                        CurrentTab() // Muestra el contenido de la pestaña actual
+                content = { paddingValues ->
+                    Box(modifier = Modifier.padding(paddingValues)) {
+                        CurrentTab()
                     }
                 },
                 bottomBar = {
-                    NavigationBar {
-                        // Lista de todas las pestañas de la barra inferior
-                        TabNavigationItem(HomeTab)
-                        TabNavigationItem(SearchTab)
-                        TabNavigationItem(CartTab)
-                        TabNavigationItem(ProfileTab)
+                    // Contenedor con esquinas redondeadas
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 16.dp)
+                            .height(70.dp)
+                            .clip(AppShapes.large),
+                        color = Primary,
+                        tonalElevation = 8.dp
+                    ) {
+                        NavigationBar(
+                            containerColor = Color.Transparent,
+                            modifier = Modifier.fillMaxSize(),
+                            tonalElevation = 0.dp,
+                            windowInsets = WindowInsets(0, 0, 0, 0)
+                        ) {
+                            TabNavigationItem(HomeTab, "Explorer")
+                            TabNavigationItem(CartTab, "Cart")
+                            TabNavigationItem(FavoriteTab, "Wishlist")
+                            TabNavigationItem(SearchTab, "My Order")
+                            TabNavigationItem(ProfileTab, "Profile")
+                        }
                     }
                 }
             )
@@ -54,23 +59,33 @@ class BottomBarScreen : Screen {
 }
 
 @Composable
-private fun RowScope.TabNavigationItem(tab: Tab) {
+private fun RowScope.TabNavigationItem(tab: Tab, label: String) {
     val tabNavigator = LocalTabNavigator.current
+    val isSelected = tabNavigator.current == tab
 
     NavigationBarItem(
-        selected = tabNavigator.current == tab,
+        selected = isSelected,
         onClick = { tabNavigator.current = tab },
         icon = {
             tab.options.icon?.let { painter ->
                 Icon(
                     painter = painter,
-                    contentDescription = tab.options.title,
-                    modifier = Modifier.size(22.dp)
+                    contentDescription = label,
+                    modifier = Modifier.size(22.dp),
+                    tint = Color.White
                 )
             }
         },
         label = {
-            Text(tab.options.title, style = MaterialTheme.typography.labelSmall)
-        }
+            Text(
+                text = label,
+                fontSize = 10.sp,
+                color = Color.White.copy(alpha = if (isSelected) 1f else 0.7f)
+            )
+        },
+        alwaysShowLabel = true, // Asegura que el espacio para el texto esté siempre presente y centrado
+        colors = NavigationBarItemDefaults.colors(
+            indicatorColor = Color.White.copy(alpha = 0.2f)
+        )
     )
 }

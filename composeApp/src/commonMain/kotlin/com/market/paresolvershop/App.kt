@@ -11,6 +11,7 @@ import com.market.paresolvershop.di.platformModule
 import com.market.paresolvershop.di.productModule
 import com.market.paresolvershop.di.supabaseModule
 import com.market.paresolvershop.ui.navigation.bottombar.BottomBarScreen
+import com.market.paresolvershop.ui.theme.ShopAppTheme
 import org.koin.compose.KoinApplication
 
 @Composable
@@ -27,7 +28,7 @@ fun App() {
         )
     }) {
         // Tema de Material Design
-        MaterialTheme {
+        ShopAppTheme {
             Navigator(screen = BottomBarScreen()) { navigator ->
                 SlideTransition(navigator)
             }
