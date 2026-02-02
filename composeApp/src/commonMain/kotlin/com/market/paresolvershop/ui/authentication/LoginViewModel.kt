@@ -3,7 +3,6 @@ package com.market.paresolvershop.ui.authentication
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.market.paresolvershop.data.model.AuthUserEntity
 import com.market.paresolvershop.domain.auth.SignInWithEmail
 import com.market.paresolvershop.domain.auth.SignInWithGoogle
 import com.market.paresolvershop.domain.model.DataResult
