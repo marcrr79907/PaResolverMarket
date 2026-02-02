@@ -59,6 +59,7 @@ import com.market.paresolvershop.ui.theme.Inter
 import com.market.paresolvershop.ui.theme.OnSurface
 import com.market.paresolvershop.ui.theme.OnSurfaceVariant
 import com.market.paresolvershop.ui.theme.Primary
+import com.market.paresolvershop.ui.theme.Secondary
 import com.market.paresolvershop.ui.theme.SoftGray
 import com.market.paresolvershop.ui.theme.SpaceGrotesk
 import com.market.paresolvershop.ui.theme.SurfaceVariant
@@ -233,7 +234,7 @@ fun CartListItem(item: CartItem, onQuantityChange: (Int) -> Unit) {
                 modifier = Modifier.padding(4.dp)
             ) {
                 IconButton(onClick = { onQuantityChange(item.quantity - 1) }, modifier = Modifier.size(24.dp)) {
-                    Icon(FontAwesomeIcons.Solid.Minus, contentDescription = null, modifier = Modifier.size(12.dp), tint = Color.Blue.copy(alpha = 0.6f))
+                    Icon(FontAwesomeIcons.Solid.Minus, contentDescription = null, modifier = Modifier.size(12.dp), tint = Secondary)
                 }
                 Text(
                     text = "${item.quantity}",

@@ -20,6 +20,7 @@ import cafe.adriel.voyager.navigator.tab.TabOptions
 import com.market.paresolvershop.ui.admin.AdminScreen
 import com.market.paresolvershop.ui.authentication.LoginScreen
 import com.market.paresolvershop.ui.authentication.RegisterScreen
+import com.market.paresolvershop.ui.profilemagnament.AddressManagementScreen
 import com.market.paresolvershop.ui.profilemagnament.GuestProfileScreen
 import com.market.paresolvershop.ui.profilemagnament.ProfileScreen
 import com.market.paresolvershop.ui.profilemagnament.ProfileUiState
@@ -34,19 +35,17 @@ object ProfileTab : Tab {
     override val options: TabOptions
         @Composable
         get() {
-            val title = "Perfil"
+            val title = "Profile"
             val icon = rememberVectorPainter(FontAwesomeIcons.Solid.User)
-            return remember { TabOptions(index = 2u, title = title, icon = icon) }
+            return remember { TabOptions(index = 4u, title = title, icon = icon) }
         }
 
     @Composable
     override fun Content() {
-        // 1. La pestaña ahora solo contiene un Navigator que empieza en ProfileRootScreen.
         Navigator(screen = ProfileRootScreen)
     }
 }
 
-// 2. ProfileRootScreen es una pantalla única que se encarga de observar el estado.
 object ProfileRootScreen : Screen {
     @OptIn(KoinExperimentalAPI::class)
     @Composable
@@ -55,7 +54,6 @@ object ProfileRootScreen : Screen {
         val viewModel = koinViewModel<ProfileViewModel>()
         val uiState by viewModel.uiState.collectAsState()
 
-        // 3. El `when` reacciona a los cambios de `uiState` y muestra el Composable correcto.
         when (val state = uiState) {
             is ProfileUiState.Authenticated -> {
                 ProfileScreen(
@@ -63,8 +61,8 @@ object ProfileRootScreen : Screen {
                     userName = state.user.name,
                     isAdmin = state.isAdmin,
                     onNavigateToAdmin = { navigator.push(AdminScreen) },
-                    onNavigateToHistory = { /* TODO */ },
-                    onNavigateToAddresses = { /* TODO */ },
+                    onNavigateToHistory = { /* Implementar más tarde */ },
+                    onNavigateToAddresses = { navigator.push(AddressManagementScreen()) },
                     onLogout = viewModel::logOut
                 )
             }
