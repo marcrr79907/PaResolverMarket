@@ -76,8 +76,6 @@ fun CartScreen(cartViewModel: CartViewModel, onCheckout: () -> Unit) {
     val uiState by cartViewModel.uiState.collectAsState()
     val navigator = LocalNavigator.currentOrThrow
     val snackbarHostState = remember { SnackbarHostState() }
-    
-    var selectedPaymentMethod by remember { mutableStateOf("Cash") }
 
     LaunchedEffect(Unit) {
         cartViewModel.eventFlow.collectLatest { event ->
@@ -92,14 +90,6 @@ fun CartScreen(cartViewModel: CartViewModel, onCheckout: () -> Unit) {
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text("My Cart", fontFamily = SpaceGrotesk, fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(
-                        onClick = { navigator.pop() },
-                        modifier = Modifier.padding(start = 12.dp).background(SurfaceVariant.copy(alpha = 0.5f), CircleShape)
-                    ) {
-                        Icon(FontAwesomeIcons.Solid.ArrowLeft, contentDescription = "Back", modifier = Modifier.size(18.dp))
-                    }
-                },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
             )
         }
@@ -149,28 +139,6 @@ fun CartScreen(cartViewModel: CartViewModel, onCheckout: () -> Unit) {
                         Text("Total", fontFamily = Inter, fontWeight = FontWeight.Bold, fontSize = 18.sp)
                         Text("$${uiState.subtotal + 13}", fontFamily = SpaceGrotesk, fontWeight = FontWeight.Bold, fontSize = 20.sp)
                     }
-                }
-
-                // Payment Method
-                Text("Payment Method", fontFamily = SpaceGrotesk, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                Spacer(Modifier.height(12.dp))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    PaymentMethodCard(
-                        title = "Cash",
-                        subtitle = "Pay Cash when the medicine arrives at the destination",
-                        icon = FontAwesomeIcons.Solid.MoneyBillWave,
-                        isSelected = selectedPaymentMethod == "Cash",
-                        modifier = Modifier.weight(1f),
-                        onClick = { selectedPaymentMethod = "Cash" }
-                    )
-                    PaymentMethodCard(
-                        title = "Bank Transfer",
-                        subtitle = "Login to your online account and make payment",
-                        icon = FontAwesomeIcons.Solid.University,
-                        isSelected = selectedPaymentMethod == "Bank",
-                        modifier = Modifier.weight(1f),
-                        onClick = { selectedPaymentMethod = "Bank" }
-                    )
                 }
 
                 Spacer(Modifier.height(24.dp))

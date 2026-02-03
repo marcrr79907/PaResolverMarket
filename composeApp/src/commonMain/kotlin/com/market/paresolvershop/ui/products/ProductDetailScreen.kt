@@ -227,14 +227,14 @@ fun ProductDetailContent(product: Product, onAddToCart: () -> Unit) {
 
             // 5. Select Model
             Text(
-                "Select Model",
+                "Seleccione Variante",
                 fontFamily = SpaceGrotesk,
                 fontWeight = FontWeight.Bold,
                 fontSize = 16.sp
             )
             
-            val variants = listOf("Core i3", "Core i5", "Core i7", "Core i9")
-            var selectedVariant by remember { mutableStateOf("Core i5") }
+            val variants = listOf("Pierna", "Lomo")
+            var selectedVariant by remember { mutableStateOf("Pierna") }
             
             LazyRow(
                 modifier = Modifier.padding(top = 12.dp),
@@ -260,6 +260,15 @@ fun ProductDetailContent(product: Product, onAddToCart: () -> Unit) {
             Spacer(Modifier.height(24.dp))
 
             // 6. Description
+            Text(
+                "Description",
+                fontFamily = SpaceGrotesk,
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp
+            )
+
+            Spacer(Modifier.height(10.dp))
+
             Text(
                 text = product.description,
                 style = MaterialTheme.typography.bodyMedium,

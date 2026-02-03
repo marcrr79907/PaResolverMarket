@@ -29,7 +29,6 @@ class CartRepositoryImpl(
     private val authRepository: AuthRepository
 ) : CartRepository {
 
-    // Canal para notificar cambios y forzar recarga del Flow
     private val cartRefreshTrigger = MutableSharedFlow<Unit>(replay = 1)
 
     override fun getCartItems(): Flow<List<CartItem>> {
@@ -64,7 +63,7 @@ class CartRepositoryImpl(
         }
     }
 
-    override suspend fun addToCart(product: Product): DataResult<Unit> {
+    override suspend fun addToCart(product: Product, quantity: Int): DataResult<Unit> {
         val userId = authRepository.getCurrentUser()?.id ?: return DataResult.Error("Inicia sesión")
         return try {
             val existingItem = supabase.from("cart_items").select {
@@ -72,15 +71,18 @@ class CartRepositoryImpl(
             }.decodeSingleOrNull<CartItemEntity>()
 
             if (existingItem != null) {
-                if (product.stock > existingItem.quantity) {
-                    supabase.from("cart_items").update({ CartItemEntity::quantity setTo existingItem.quantity + 1 }) {
+                val newQuantity = existingItem.quantity + quantity
+                if (product.stock >= newQuantity) {
+                    supabase.from("cart_items").update({ CartItemEntity::quantity setTo newQuantity }) {
                         filter { eq("user_id", userId); eq("product_id", product.id) }
                     }
                 } else return DataResult.Error("Sin stock suficiente")
             } else {
-                supabase.from("cart_items").insert(CartItemEntity(userId, product.id, 1))
+                if (product.stock >= quantity) {
+                    supabase.from("cart_items").insert(CartItemEntity(userId, product.id, quantity))
+                } else return DataResult.Error("Sin stock suficiente")
             }
-            cartRefreshTrigger.emit(Unit) // Notificar cambio
+            cartRefreshTrigger.emit(Unit)
             DataResult.Success(Unit)
         } catch (e: Exception) {
             DataResult.Error(e.message ?: "Error")
@@ -97,7 +99,7 @@ class CartRepositoryImpl(
             } else {
                 removeFromCart(productId)
             }
-            cartRefreshTrigger.emit(Unit) // Notificar cambio inmediato
+            cartRefreshTrigger.emit(Unit)
             DataResult.Success(Unit)
         } catch (e: Exception) {
             DataResult.Error(e.message ?: "Error")
@@ -110,7 +112,7 @@ class CartRepositoryImpl(
             supabase.from("cart_items").delete {
                 filter { eq("user_id", userId); eq("product_id", productId) }
             }
-            cartRefreshTrigger.emit(Unit) // Notificar cambio
+            cartRefreshTrigger.emit(Unit)
         } catch (e: Exception) {}
     }
 
@@ -120,7 +122,7 @@ class CartRepositoryImpl(
             supabase.from("cart_items").delete {
                 filter { eq("user_id", userId) }
             }
-            cartRefreshTrigger.emit(Unit) // Notificar cambio
+            cartRefreshTrigger.emit(Unit)
         } catch (e: Exception) {}
     }
 }

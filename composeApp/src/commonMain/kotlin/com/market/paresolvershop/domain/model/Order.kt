@@ -24,7 +24,13 @@ data class Order(
     @SerialName("recipient_first_name")
     val recipientFirstName: String? = null,
     @SerialName("recipient_last_name")
-    val recipientLastName: String? = null
+    val recipientLastName: String? = null,
+    @SerialName("recipient_address")
+    val recipientAddress: String? = null,
+    @SerialName("recipient_phone")
+    val recipientPhone: String? = null,
+    @SerialName("recipient_city")
+    val recipientCity: String? = null
 ) {
     val fullRecipientName: String
         get() = if (recipientFirstName != null) "$recipientFirstName $recipientLastName" else "N/A"

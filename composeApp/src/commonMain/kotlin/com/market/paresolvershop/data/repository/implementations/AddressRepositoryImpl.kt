@@ -23,7 +23,8 @@ class AddressRepositoryImpl(
             val userId = supabase.auth.currentUserOrNull()?.id ?: return DataResult.Error("Usuario no autenticado")
             val result = supabase.from("user_addresses").select {
                 filter {
-                    eq("user_id", userId)
+                    eq("user_id", userId);
+                    eq("is_visible", true)
                 }
                 order("created_at", Order.DESCENDING)
             }.decodeList<UserAddress>()
@@ -67,7 +68,7 @@ class AddressRepositoryImpl(
 
     override suspend fun deleteAddress(addressId: String): DataResult<Unit> {
         return try {
-            supabase.from("user_addresses").delete {
+            supabase.from("user_addresses").update(mapOf("is_visible" to false)) {
                 filter { eq("id", addressId) }
             }
             fetchAddresses()

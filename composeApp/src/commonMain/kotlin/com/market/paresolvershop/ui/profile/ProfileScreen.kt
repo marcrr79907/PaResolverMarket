@@ -36,20 +36,11 @@ fun ProfileScreen(
     onLogout: () -> Unit
 ) {
     val scrollState = rememberScrollState()
-    val navigator = LocalNavigator.currentOrThrow
 
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text("Profile", fontFamily = SpaceGrotesk, fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(
-                        onClick = { /* Handle back or menu */ },
-                        modifier = Modifier.padding(start = 12.dp).background(SurfaceVariant.copy(alpha = 0.5f), CircleShape)
-                    ) {
-                        Icon(FontAwesomeIcons.Solid.ArrowLeft, contentDescription = "Back", modifier = Modifier.size(18.dp))
-                    }
-                },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
             )
         }

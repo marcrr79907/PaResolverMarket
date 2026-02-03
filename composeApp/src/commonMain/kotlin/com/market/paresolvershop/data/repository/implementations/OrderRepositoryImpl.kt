@@ -29,16 +29,13 @@ class OrderRepositoryImpl(
 
     override suspend fun createOrder(order: Order, items: List<OrderItem>): DataResult<String> = withContext(Dispatchers.Default) {
         try {
-            // Convertimos el dominio a entidad pura de DB (sin campos de join)
             val dbOrder = order.toEntity()
-
             val insertedOrder = supabase.from("orders").insert(dbOrder) {
                 select()
             }.decodeSingle<OrderEntity>()
 
             val orderId = insertedOrder.id ?: throw Exception("No order ID returned")
 
-            // Convertimos items a entidades
             val dbItems = items.map { it.copy(orderId = orderId).toEntity() }
             supabase.from("order_items").insert(dbItems)
 
@@ -53,15 +50,13 @@ class OrderRepositoryImpl(
         try {
             val user = supabase.auth.currentUserOrNull() ?: return@withContext DataResult.Error("Inicia sesión")
             
-            // SOLUCIÓN AL ERROR DE TIPO: Usamos Columns.raw para el Join
             val result = supabase.from("orders").select(
-                columns = Columns.raw("*, user_addresses(first_name, last_name)")
+                columns = Columns.raw("*, user_addresses(first_name, last_name, address_line, phone, city)")
             ) {
                 filter { eq("user_id", user.id) }
                 order("created_at", SupabaseOrderDirection.DESCENDING)
             }.decodeList<OrderEntity>()
             
-            // Mapeamos a Dominio usando la función de extensión
             _orders.value = result.map { it.toDomain() }
             DataResult.Success(Unit)
         } catch (e: Exception) {
@@ -80,7 +75,6 @@ class OrderRepositoryImpl(
                     filter { eq("id", entity.productId) }
                 }.decodeSingleOrNull<Product>()
                 
-                // Mapeamos de vuelta a dominio para la UI
                 product?.let { 
                     OrderItem(
                         id = entity.id,
@@ -95,6 +89,20 @@ class OrderRepositoryImpl(
             DataResult.Success(result)
         } catch (e: Exception) {
             DataResult.Error(e.message ?: "Error al obtener detalles")
+        }
+    }
+
+    override suspend fun getOrderById(orderId: String): DataResult<Order> = withContext(Dispatchers.Default) {
+        try {
+            val entity = supabase.from("orders").select(
+                columns = Columns.raw("*, user_addresses(first_name, last_name, address_line, phone, city)")
+            ) {
+                filter { eq("id", orderId) }
+            }.decodeSingle<OrderEntity>()
+            
+            DataResult.Success(entity.toDomain())
+        } catch (e: Exception) {
+            DataResult.Error(e.message ?: "Error al obtener la orden")
         }
     }
 }

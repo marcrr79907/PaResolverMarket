@@ -20,7 +20,10 @@ data class OrderEntity(
 @Serializable
 data class AddressJoinEntity(
     @SerialName("first_name") val firstName: String,
-    @SerialName("last_name") val lastName: String
+    @SerialName("last_name") val lastName: String,
+    @SerialName("address_line") val addressLine: String? = null,
+    @SerialName("phone") val phone: String? = null,
+    @SerialName("city") val city: String? = null
 )
 
 @Serializable
@@ -42,7 +45,10 @@ fun OrderEntity.toDomain(): Order = Order(
     paymentMethod = paymentMethod,
     createdAt = createdAt,
     recipientFirstName = address?.firstName,
-    recipientLastName = address?.lastName
+    recipientLastName = address?.lastName,
+    recipientAddress = address?.addressLine,
+    recipientPhone = address?.phone,
+    recipientCity = address?.city
 )
 
 fun Order.toEntity(): OrderEntity = OrderEntity(

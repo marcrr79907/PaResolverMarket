@@ -22,5 +22,7 @@ data class UserAddress(
     @SerialName("city")
     val city: String = "",
     @SerialName("is_default")
-    val isDefault: Boolean = false
+    val isDefault: Boolean = false,
+    @SerialName("is_visible")
+    val isVisible: Boolean = true
 )

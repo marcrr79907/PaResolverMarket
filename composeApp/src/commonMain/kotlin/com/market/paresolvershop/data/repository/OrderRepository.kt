@@ -11,4 +11,5 @@ interface OrderRepository {
     suspend fun createOrder(order: Order, items: List<OrderItem>): DataResult<String>
     suspend fun fetchOrders(): DataResult<Unit>
     suspend fun getOrderItems(orderId: String): DataResult<List<Pair<OrderItem, Product>>>
+    suspend fun getOrderById(orderId: String): DataResult<Order>
 }
