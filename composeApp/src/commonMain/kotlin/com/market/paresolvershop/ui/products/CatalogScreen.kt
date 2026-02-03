@@ -44,12 +44,12 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import coil3.compose.AsyncImage
 import com.market.paresolvershop.domain.model.Product
+import com.market.paresolvershop.ui.navigation.SearchScreen
 import com.market.paresolvershop.ui.profilemagnament.ProfileUiState
 import com.market.paresolvershop.ui.profilemagnament.ProfileViewModel
 import com.market.paresolvershop.ui.theme.Inter
 import com.market.paresolvershop.ui.theme.Primary
 import com.market.paresolvershop.ui.theme.SpaceGrotesk
-import com.market.paresolvershop.ui.theme.Surface
 import com.market.paresolvershop.ui.theme.SurfaceVariant
 import compose.icons.FontAwesomeIcons
 import compose.icons.fontawesomeicons.Solid
@@ -66,8 +66,8 @@ import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.annotation.KoinExperimentalAPI
 
 object CatalogScreen : Screen {
-    @OptIn(KoinExperimentalAPI::class)
     @Composable
+    @OptIn(KoinExperimentalAPI::class)
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
         val viewModel = koinViewModel<CatalogViewModel>()
@@ -81,11 +81,10 @@ object CatalogScreen : Screen {
             else -> "Invitado"
         }
 
-        // Eliminamos Scaffold y BottomNavigationBar manual
         Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
             when (uiState) {
                 is CatalogUiState.Loading -> {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = Primary)
                 }
                 is CatalogUiState.Success -> {
                     CatalogGridContent(
@@ -93,6 +92,9 @@ object CatalogScreen : Screen {
                         products = (uiState as CatalogUiState.Success).products,
                         onProductClick = { productId ->
                             navigator.push(ProductDetailScreen(productId))
+                        },
+                        onSearchClick = {
+                            navigator.push(SearchScreen)
                         }
                     )
                 }
@@ -112,13 +114,14 @@ object CatalogScreen : Screen {
 fun CatalogGridContent(
     userName: String,
     products: List<Product>,
-    onProductClick: (String) -> Unit
+    onProductClick: (String) -> Unit,
+    onSearchClick: () -> Unit
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = 16.dp)
     ) {
-        item { HeaderSection(userName) }
+        item { HeaderSection(userName, onSearchClick) }
         item { PromoBanner() }
         item { CategoriesSection() }
         
@@ -136,7 +139,7 @@ fun CatalogGridContent(
                 )
                 Text(
                     "Ver todo",
-                    color = MaterialTheme.colorScheme.primary,
+                    color = Primary,
                     style = MaterialTheme.typography.labelLarge,
                     modifier = Modifier.clickable { }
                 )
@@ -165,7 +168,7 @@ fun CatalogGridContent(
 }
 
 @Composable
-fun HeaderSection(name: String) {
+fun HeaderSection(name: String, onSearchClick: () -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 24.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -185,15 +188,16 @@ fun HeaderSection(name: String) {
             )
         }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            HeaderIcon(FontAwesomeIcons.Solid.Search)
-            HeaderIcon(FontAwesomeIcons.Solid.Bell)
+            HeaderIcon(FontAwesomeIcons.Solid.Search, onClick = onSearchClick)
+            HeaderIcon(FontAwesomeIcons.Solid.Bell, onClick = { /* Notificaciones */ })
         }
     }
 }
 
 @Composable
-fun HeaderIcon(icon: ImageVector) {
+fun HeaderIcon(icon: ImageVector, onClick: () -> Unit) {
     Surface(
+        onClick = onClick,
         shape = CircleShape,
         color = MaterialTheme.colorScheme.surface,
         shadowElevation = 2.dp,
@@ -213,7 +217,7 @@ fun PromoBanner() {
             .height(160.dp)
             .padding(horizontal = 20.dp),
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary)
+        colors = CardDefaults.cardColors(containerColor = Primary)
     ) {
         Row(modifier = Modifier.fillMaxSize().padding(20.dp)) {
             Column(modifier = Modifier.weight(1f)) {
@@ -237,7 +241,7 @@ fun PromoBanner() {
                     modifier = Modifier.height(32.dp),
                     shape = RoundedCornerShape(8.dp)
                 ) {
-                    Text("Comprar ahora", color = MaterialTheme.colorScheme.primary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text("Comprar ahora", color = Primary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
             }
             Icon(
@@ -276,7 +280,7 @@ fun CategoriesSection() {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Surface(
                         shape = RoundedCornerShape(12.dp),
-                        color = if (category.first == "PC") Primary else Surface,
+                        color = if (category.first == "PC") Primary else MaterialTheme.colorScheme.surface,
                         border = if (category.first == "PC") null else BorderStroke(1.dp, SurfaceVariant),
                         modifier = Modifier.size(60.dp)
                     ) {
@@ -309,7 +313,7 @@ fun ProductGridItem(product: Product, modifier: Modifier = Modifier, onClick: ()
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column {
-            Box(modifier = Modifier.fillMaxWidth().height(140.dp).background(MaterialTheme.colorScheme.surfaceVariant)) {
+            Box(modifier = Modifier.fillMaxWidth().height(140.dp).background(SurfaceVariant)) {
                 if (product.imageUrl != null) {
                     AsyncImage(
                         model = product.imageUrl,
@@ -327,7 +331,7 @@ fun ProductGridItem(product: Product, modifier: Modifier = Modifier, onClick: ()
                         imageVector = FontAwesomeIcons.Solid.Heart,
                         contentDescription = null,
                         modifier = Modifier.padding(6.dp).size(14.dp),
-                        tint = MaterialTheme.colorScheme.primary
+                        tint = Primary
                     )
                 }
             }
@@ -350,7 +354,7 @@ fun ProductGridItem(product: Product, modifier: Modifier = Modifier, onClick: ()
                     }
                     Text(
                         "$${product.price}",
-                        color = MaterialTheme.colorScheme.primary,
+                        color = Primary,
                         fontWeight = FontWeight.Bold,
                         fontSize = 15.sp
                     )
