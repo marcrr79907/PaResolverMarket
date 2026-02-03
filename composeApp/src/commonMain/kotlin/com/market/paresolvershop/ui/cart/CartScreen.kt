@@ -1,8 +1,7 @@
-package com.market.paresolvershop.ui.navigation
+package com.market.paresolvershop.ui.cart
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -53,8 +52,6 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import coil3.compose.AsyncImage
 import com.market.paresolvershop.domain.model.CartItem
-import com.market.paresolvershop.ui.products.CartEvent
-import com.market.paresolvershop.ui.products.CartViewModel
 import com.market.paresolvershop.ui.theme.Inter
 import com.market.paresolvershop.ui.theme.OnSurface
 import com.market.paresolvershop.ui.theme.OnSurfaceVariant

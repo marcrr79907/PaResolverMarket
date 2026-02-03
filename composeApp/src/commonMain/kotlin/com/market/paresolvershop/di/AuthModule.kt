@@ -1,6 +1,5 @@
 package com.market.paresolvershop.di
 
-import com.market.paresolvershop.data.repository.AuthRepository
 import com.market.paresolvershop.data.repository.implementations.AuthRepositoryImpl
 import com.market.paresolvershop.domain.auth.ObserveAuthState
 import com.market.paresolvershop.domain.auth.SignInWithEmail
@@ -9,7 +8,7 @@ import com.market.paresolvershop.domain.auth.SignOut
 import com.market.paresolvershop.domain.auth.SignUpWithEmail
 import com.market.paresolvershop.ui.authentication.LoginViewModel
 import com.market.paresolvershop.ui.authentication.RegisterViewModel
-import com.market.paresolvershop.ui.profilemagnament.ProfileViewModel
+import com.market.paresolvershop.ui.profile.ProfileViewModel
 import org.koin.core.module.dsl.factoryOf
 import org.koin.core.module.dsl.singleOf
 import org.koin.core.module.dsl.viewModelOf

@@ -44,9 +44,9 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import coil3.compose.AsyncImage
 import com.market.paresolvershop.domain.model.Product
-import com.market.paresolvershop.ui.navigation.SearchScreen
-import com.market.paresolvershop.ui.profilemagnament.ProfileUiState
-import com.market.paresolvershop.ui.profilemagnament.ProfileViewModel
+import com.market.paresolvershop.ui.search.SearchScreen
+import com.market.paresolvershop.ui.profile.ProfileUiState
+import com.market.paresolvershop.ui.profile.ProfileViewModel
 import com.market.paresolvershop.ui.theme.Inter
 import com.market.paresolvershop.ui.theme.Primary
 import com.market.paresolvershop.ui.theme.SpaceGrotesk

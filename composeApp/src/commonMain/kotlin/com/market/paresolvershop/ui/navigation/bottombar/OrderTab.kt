@@ -6,17 +6,17 @@ import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.navigator.tab.Tab
 import cafe.adriel.voyager.navigator.tab.TabOptions
-import com.market.paresolvershop.ui.navigation.SearchScreen
+import com.market.paresolvershop.ui.search.SearchScreen
 import compose.icons.FontAwesomeIcons
 import compose.icons.fontawesomeicons.Solid
-import compose.icons.fontawesomeicons.solid.Search
+import compose.icons.fontawesomeicons.solid.List
 
-object SearchTab : Tab {
+object OrderTab : Tab {
     override val options: TabOptions
         @Composable
         get() {
-            val title = "Buscar"
-            val icon = rememberVectorPainter(FontAwesomeIcons.Solid.Search)
+            val title = "Order"
+            val icon = rememberVectorPainter(FontAwesomeIcons.Solid.List)
 
             return remember {
                 TabOptions(
@@ -29,6 +29,6 @@ object SearchTab : Tab {
 
     @Composable
     override fun Content() {
-        Navigator(screen = SearchScreen)
+//        Navigator(screen = SearchScreen)
     }
 }

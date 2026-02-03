@@ -8,8 +8,8 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import cafe.adriel.voyager.navigator.tab.Tab
 import cafe.adriel.voyager.navigator.tab.TabOptions
 import com.market.paresolvershop.ui.checkout.CheckoutShippingScreen
-import com.market.paresolvershop.ui.navigation.CartScreen
-import com.market.paresolvershop.ui.products.CartViewModel
+import com.market.paresolvershop.ui.cart.CartScreen
+import com.market.paresolvershop.ui.cart.CartViewModel
 import compose.icons.FontAwesomeIcons
 import compose.icons.fontawesomeicons.Solid
 import compose.icons.fontawesomeicons.solid.ShoppingCart

@@ -47,7 +47,7 @@ class BottomBarScreen : Screen {
                             TabNavigationItem(HomeTab, "Explorer")
                             TabNavigationItem(CartTab, "Cart")
                             TabNavigationItem(FavoriteTab, "Wishlist")
-                            TabNavigationItem(SearchTab, "My Order")
+                            TabNavigationItem(OrderTab, "My Order")
                             TabNavigationItem(ProfileTab, "Profile")
                         }
                     }

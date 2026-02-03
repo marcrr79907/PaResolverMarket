@@ -27,6 +27,8 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import cafe.adriel.voyager.navigator.tab.LocalTabNavigator
 import coil3.compose.AsyncImage
 import com.market.paresolvershop.domain.model.Product
+import com.market.paresolvershop.ui.cart.CartEvent
+import com.market.paresolvershop.ui.cart.CartViewModel
 import com.market.paresolvershop.ui.navigation.bottombar.ProfileTab
 import com.market.paresolvershop.ui.theme.*
 import compose.icons.FontAwesomeIcons

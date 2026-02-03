@@ -20,11 +20,11 @@ import cafe.adriel.voyager.navigator.tab.TabOptions
 import com.market.paresolvershop.ui.admin.AdminScreen
 import com.market.paresolvershop.ui.authentication.LoginScreen
 import com.market.paresolvershop.ui.authentication.RegisterScreen
-import com.market.paresolvershop.ui.profilemagnament.AddressManagementScreen
-import com.market.paresolvershop.ui.profilemagnament.GuestProfileScreen
-import com.market.paresolvershop.ui.profilemagnament.ProfileScreen
-import com.market.paresolvershop.ui.profilemagnament.ProfileUiState
-import com.market.paresolvershop.ui.profilemagnament.ProfileViewModel
+import com.market.paresolvershop.ui.profile.AddressManagementScreen
+import com.market.paresolvershop.ui.profile.GuestProfileScreen
+import com.market.paresolvershop.ui.profile.ProfileScreen
+import com.market.paresolvershop.ui.profile.ProfileUiState
+import com.market.paresolvershop.ui.profile.ProfileViewModel
 import compose.icons.FontAwesomeIcons
 import compose.icons.fontawesomeicons.Solid
 import compose.icons.fontawesomeicons.solid.User

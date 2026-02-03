@@ -8,9 +8,10 @@ import com.market.paresolvershop.domain.model.Product
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.onStart
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -20,20 +21,7 @@ data class CartItemEntity(
     val userId: String,
     @SerialName("product_id")
     val productId: String,
-    val quantity: Int,
-    // Datos del producto embebidos (si usas una view o join)
-    @SerialName("product_name")
-    val productName: String? = null,
-    @SerialName("product_price")
-    val productPrice: Double? = null,
-    @SerialName("product_description")
-    val productDescription: String? = null,
-    @SerialName("product_stock")
-    val productStock: Int? = null,
-    @SerialName("product_image_url")
-    val productImageUrl: String? = null,
-    @SerialName("product_category")
-    val productCategory: String? = null
+    val quantity: Int
 )
 
 class CartRepositoryImpl(
@@ -41,23 +29,17 @@ class CartRepositoryImpl(
     private val authRepository: AuthRepository
 ) : CartRepository {
 
-    /**
-     * Obtiene los items del carrito.
-     * Nota: Si necesitas actualización en tiempo real, tendrás que implementar
-     * un mecanismo de polling o usar Realtime correctamente cuando la API lo permita.
-     */
+    // Canal para notificar cambios y forzar recarga del Flow
+    private val cartRefreshTrigger = MutableSharedFlow<Unit>(replay = 1)
+
     override fun getCartItems(): Flow<List<CartItem>> {
-        return authRepository.authState.flatMapLatest { user ->
-            if (user == null) {
-                flowOf(emptyList())
-            } else {
-                flow {
-                    try {
-                        val items = fetchCartItemsForUser(user.id)
-                        emit(items)
-                    } catch (e: Exception) {
-                        emit(emptyList())
-                    }
+        return cartRefreshTrigger.onStart { emit(Unit) }.flatMapLatest {
+            val user = authRepository.getCurrentUser()
+            flow {
+                if (user == null) {
+                    emit(emptyList())
+                } else {
+                    emit(fetchCartItemsForUser(user.id))
                 }
             }
         }
@@ -65,31 +47,17 @@ class CartRepositoryImpl(
 
     private suspend fun fetchCartItemsForUser(userId: String): List<CartItem> {
         return try {
-            // Opción 1: Si tienes una view que hace join entre cart_items y products
-            // val entities = supabase.from("cart_items_with_products")
-            //     .select { filter { eq("user_id", userId) } }
-            //     .decodeList<CartItemEntity>()
-
-            // Opción 2: Consultar cart_items y luego productos (2 queries)
             val cartEntities = supabase.from("cart_items")
                 .select()
                 .decodeList<CartItemEntity>()
                 .filter { it.userId == userId }
 
             cartEntities.mapNotNull { cartEntity ->
-                // Obtener el producto completo
                 val product = supabase.from("products")
-                    .select {
-                        filter { eq("id", cartEntity.productId) }
-                    }
+                    .select { filter { eq("id", cartEntity.productId) } }
                     .decodeSingleOrNull<Product>()
 
-                product?.let {
-                    CartItem(
-                        product = it,
-                        quantity = cartEntity.quantity
-                    )
-                }
+                product?.let { CartItem(product = it, quantity = cartEntity.quantity) }
             }
         } catch (e: Exception) {
             emptyList()
@@ -97,114 +65,62 @@ class CartRepositoryImpl(
     }
 
     override suspend fun addToCart(product: Product): DataResult<Unit> {
-        val userId = authRepository.getCurrentUser()?.id
-            ?: return DataResult.Error("Usuario no autenticado")
-
+        val userId = authRepository.getCurrentUser()?.id ?: return DataResult.Error("Inicia sesión")
         return try {
-            // Verificar si ya existe en el carrito
-            val existingItem = supabase.from("cart_items")
-                .select {
-                    filter {
-                        eq("user_id", userId)
-                        eq("product_id", product.id)
-                    }
-                }
-                .decodeSingleOrNull<CartItemEntity>()
+            val existingItem = supabase.from("cart_items").select {
+                filter { eq("user_id", userId); eq("product_id", product.id) }
+            }.decodeSingleOrNull<CartItemEntity>()
 
             if (existingItem != null) {
-                // Verificar stock antes de incrementar
                 if (product.stock > existingItem.quantity) {
-                    // Actualizar cantidad
-                    supabase.from("cart_items")
-                        .update({
-                            CartItemEntity::quantity setTo existingItem.quantity + 1
-                        }) {
-                            filter {
-                                eq("user_id", userId)
-                                eq("product_id", product.id)
-                            }
-                        }
-                } else {
-                    return DataResult.Error("Máximo stock para \"${product.name}\" en su carrito")
-                }
+                    supabase.from("cart_items").update({ CartItemEntity::quantity setTo existingItem.quantity + 1 }) {
+                        filter { eq("user_id", userId); eq("product_id", product.id) }
+                    }
+                } else return DataResult.Error("Sin stock suficiente")
             } else {
-                // Crear nuevo item
-                val newItem = CartItemEntity(
-                    userId = userId,
-                    productId = product.id,
-                    quantity = 1
-                )
-                supabase.from("cart_items").insert(newItem)
+                supabase.from("cart_items").insert(CartItemEntity(userId, product.id, 1))
             }
-
+            cartRefreshTrigger.emit(Unit) // Notificar cambio
             DataResult.Success(Unit)
         } catch (e: Exception) {
-            DataResult.Error(e.message ?: "Error al añadir al carrito")
+            DataResult.Error(e.message ?: "Error")
         }
     }
 
     override suspend fun updateQuantity(productId: String, quantity: Int): DataResult<Unit> {
-        val userId = authRepository.getCurrentUser()?.id
-            ?: return DataResult.Error("Usuario no autenticado")
-
+        val userId = authRepository.getCurrentUser()?.id ?: return DataResult.Error("Inicia sesión")
         return try {
             if (quantity > 0) {
-                // Verificar stock disponible
-                val product = supabase.from("products")
-                    .select {
-                        filter { eq("id", productId) }
-                    }
-                    .decodeSingleOrNull<Product>()
-
-                if (product != null && quantity > product.stock) {
-                    return DataResult.Error("La cantidad solicitada supera el stock disponible.")
+                supabase.from("cart_items").update({ CartItemEntity::quantity setTo quantity }) {
+                    filter { eq("user_id", userId); eq("product_id", productId) }
                 }
-
-                // Actualizar cantidad
-                supabase.from("cart_items")
-                    .update({
-                        CartItemEntity::quantity setTo quantity
-                    }) {
-                        filter {
-                            eq("user_id", userId)
-                            eq("product_id", productId)
-                        }
-                    }
             } else {
-                // Si la cantidad es 0, eliminar del carrito
                 removeFromCart(productId)
             }
-
+            cartRefreshTrigger.emit(Unit) // Notificar cambio inmediato
             DataResult.Success(Unit)
         } catch (e: Exception) {
-            DataResult.Error(e.message ?: "Error actualizando la cantidad")
+            DataResult.Error(e.message ?: "Error")
         }
     }
 
     override suspend fun removeFromCart(productId: String) {
         val userId = authRepository.getCurrentUser()?.id ?: return
-
         try {
             supabase.from("cart_items").delete {
-                filter {
-                    eq("user_id", userId)
-                    eq("product_id", productId)
-                }
+                filter { eq("user_id", userId); eq("product_id", productId) }
             }
-        } catch (e: Exception) {
-            // Ignorar errores en delete
-        }
+            cartRefreshTrigger.emit(Unit) // Notificar cambio
+        } catch (e: Exception) {}
     }
 
     override suspend fun clearCart() {
         val userId = authRepository.getCurrentUser()?.id ?: return
-
         try {
             supabase.from("cart_items").delete {
                 filter { eq("user_id", userId) }
             }
-        } catch (e: Exception) {
-            // Ignorar errores
-        }
+            cartRefreshTrigger.emit(Unit) // Notificar cambio
+        } catch (e: Exception) {}
     }
 }

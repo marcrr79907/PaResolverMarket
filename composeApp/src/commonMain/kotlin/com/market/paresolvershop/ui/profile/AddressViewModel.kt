@@ -1,4 +1,4 @@
-package com.market.paresolvershop.ui.profilemagnament
+package com.market.paresolvershop.ui.profile
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope

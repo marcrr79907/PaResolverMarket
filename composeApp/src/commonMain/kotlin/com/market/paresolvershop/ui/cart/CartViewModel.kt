@@ -1,4 +1,4 @@
-package com.market.paresolvershop.ui.products
+package com.market.paresolvershop.ui.cart
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope

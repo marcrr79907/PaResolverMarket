@@ -7,6 +7,7 @@ import cafe.adriel.voyager.transitions.SlideTransition
 import com.market.paresolvershop.di.authModule
 import com.market.paresolvershop.di.cartModule
 import com.market.paresolvershop.di.checkoutModule
+import com.market.paresolvershop.di.orderModule
 import com.market.paresolvershop.di.platformModule
 import com.market.paresolvershop.di.productModule
 import com.market.paresolvershop.di.supabaseModule
@@ -19,12 +20,13 @@ fun App() {
     // Inicializar Koin para toda la aplicación
     KoinApplication(application = {
         modules(
-            supabaseModule,
             authModule,
+            cartModule,
+            checkoutModule,
+            orderModule,
             platformModule,
             productModule,
-            cartModule,
-            checkoutModule
+            supabaseModule,
         )
     }) {
         // Tema de Material Design

@@ -44,14 +44,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import com.market.paresolvershop.domain.model.UserAddress
-import com.market.paresolvershop.ui.profilemagnament.AddressManagementScreen
-import com.market.paresolvershop.ui.profilemagnament.AddressUiState
-import com.market.paresolvershop.ui.profilemagnament.AddressViewModel
+import com.market.paresolvershop.ui.cart.CartViewModel
+import com.market.paresolvershop.ui.profile.AddressManagementScreen
+import com.market.paresolvershop.ui.profile.AddressUiState
+import com.market.paresolvershop.ui.profile.AddressViewModel
 import com.market.paresolvershop.ui.theme.Inter
 import com.market.paresolvershop.ui.theme.OnSurfaceVariant
 import com.market.paresolvershop.ui.theme.Primary
@@ -73,7 +73,10 @@ object CheckoutShippingScreen : Screen {
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
         val addressViewModel = koinViewModel<AddressViewModel>()
+        val cartViewModel = koinViewModel<CartViewModel>()
+        
         val uiState by addressViewModel.uiState.collectAsState()
+        val cartState by cartViewModel.uiState.collectAsState()
         
         var selectedAddress by remember { mutableStateOf<UserAddress?>(null) }
 
@@ -160,8 +163,17 @@ object CheckoutShippingScreen : Screen {
                 Spacer(Modifier.height(16.dp))
 
                 Button(
-                    onClick = { /* navigator.push(CheckoutPaymentScreen) */ },
-                    enabled = selectedAddress != null,
+                    onClick = { 
+                        selectedAddress?.let { address ->
+                            navigator.push(
+                                CheckoutPaymentScreen(
+                                selectedAddress = address,
+                                cartItems = cartState.items
+                                )
+                            )
+                        }
+                    },
+                    enabled = selectedAddress != null && cartState.items.isNotEmpty(),
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp)
@@ -169,7 +181,7 @@ object CheckoutShippingScreen : Screen {
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A1C1E))
                 ) {
-                    Text("Continue to payment details", color = Color.White, fontWeight = FontWeight.Bold)
+                    Text("Continuar a detalles de pago", color = Color.White, fontWeight = FontWeight.Bold)
                 }
             }
         }
