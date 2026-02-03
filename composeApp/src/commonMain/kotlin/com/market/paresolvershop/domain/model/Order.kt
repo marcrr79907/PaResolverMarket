@@ -18,8 +18,17 @@ data class Order(
     @SerialName("payment_method")
     val paymentMethod: String,
     @SerialName("created_at")
-    val createdAt: String? = null
-)
+    val createdAt: String? = null,
+    
+    // Estos campos vendrán del join con user_addresses en el repositorio
+    @SerialName("recipient_first_name")
+    val recipientFirstName: String? = null,
+    @SerialName("recipient_last_name")
+    val recipientLastName: String? = null
+) {
+    val fullRecipientName: String
+        get() = if (recipientFirstName != null) "$recipientFirstName $recipientLastName" else "N/A"
+}
 
 @Serializable
 data class OrderItem(
