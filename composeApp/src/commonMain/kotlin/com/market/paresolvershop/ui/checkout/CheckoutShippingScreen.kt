@@ -53,6 +53,7 @@ import com.market.paresolvershop.ui.profile.AddressManagementScreen
 import com.market.paresolvershop.ui.profile.AddressUiState
 import com.market.paresolvershop.ui.profile.AddressViewModel
 import com.market.paresolvershop.ui.theme.Inter
+import com.market.paresolvershop.ui.theme.OnSurface
 import com.market.paresolvershop.ui.theme.OnSurfaceVariant
 import com.market.paresolvershop.ui.theme.Primary
 import com.market.paresolvershop.ui.theme.SoftGray
@@ -179,7 +180,7 @@ object CheckoutShippingScreen : Screen {
                         .height(56.dp)
                         .padding(bottom = 16.dp),
                     shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A1C1E))
+                    colors = ButtonDefaults.buttonColors(containerColor = OnSurface)
                 ) {
                     Text("Continuar a detalles de pago", color = Color.White, fontWeight = FontWeight.Bold)
                 }

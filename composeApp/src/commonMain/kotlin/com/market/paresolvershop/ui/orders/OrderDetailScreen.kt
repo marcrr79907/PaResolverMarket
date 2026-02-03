@@ -1,4 +1,4 @@
-package com.market.paresolvershop.ui.profile
+package com.market.paresolvershop.ui.orders
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding

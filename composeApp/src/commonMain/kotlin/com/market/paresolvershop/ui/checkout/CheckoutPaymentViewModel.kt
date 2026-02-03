@@ -9,9 +9,7 @@ import com.market.paresolvershop.domain.model.DataResult
 import com.market.paresolvershop.domain.model.Order
 import com.market.paresolvershop.domain.model.OrderItem
 import com.market.paresolvershop.domain.model.UserAddress
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
@@ -36,7 +34,7 @@ class CheckoutPaymentViewModel(
             
             val userId = address.userId ?: ""
             val addressId = address.id ?: ""
-            val totalAmount = items.sumOf { it.product.price * it.quantity } + 13.0 // Subtotal + Fees
+            val totalAmount = items.sumOf { it.product.price * it.quantity } + 13.0 
 
             val order = Order(
                 userId = userId,
@@ -47,16 +45,19 @@ class CheckoutPaymentViewModel(
 
             val orderItems = items.map { item ->
                 OrderItem(
-                    orderId = "", // Se asigna en el repositorio
+                    orderId = "", 
                     productId = item.product.id,
                     quantity = item.quantity,
                     priceAtPurchase = item.product.price
                 )
             }
 
+            // 1. Crear la orden en Supabase
             when (val result = orderRepository.createOrder(order, orderItems)) {
                 is DataResult.Success -> {
-                    cartRepository.clearCart() // Vaciar el carrito tras éxito
+                    // 2. Limpiar el carrito ANTES de marcar el éxito
+                    cartRepository.clearCart()
+                    // 3. Emitir éxito
                     _uiState.value = CheckoutPaymentUiState.Success(result.data)
                 }
                 is DataResult.Error -> {

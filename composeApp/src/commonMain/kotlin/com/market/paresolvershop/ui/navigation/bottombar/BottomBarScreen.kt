@@ -13,13 +13,15 @@ import cafe.adriel.voyager.navigator.tab.CurrentTab
 import cafe.adriel.voyager.navigator.tab.LocalTabNavigator
 import cafe.adriel.voyager.navigator.tab.Tab
 import cafe.adriel.voyager.navigator.tab.TabNavigator
+import com.market.paresolvershop.ui.navigation.bottombar.HomeTab
 import com.market.paresolvershop.ui.theme.AppShapes
 import com.market.paresolvershop.ui.theme.Primary
 
-class BottomBarScreen : Screen {
+// Cambiamos a data class para permitir pasar la pestaña inicial
+data class BottomBarScreen(val initialTab: Tab = HomeTab) : Screen {
     @Composable
     override fun Content() {
-        TabNavigator(HomeTab) {
+        TabNavigator(initialTab) { tabNavigator ->
             Scaffold(
                 content = { paddingValues ->
                     Box(modifier = Modifier.padding(paddingValues)) {
@@ -27,7 +29,6 @@ class BottomBarScreen : Screen {
                     }
                 },
                 bottomBar = {
-                    // Contenedor con esquinas redondeadas
                     Surface(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -82,7 +83,7 @@ private fun RowScope.TabNavigationItem(tab: Tab, label: String) {
                 color = Color.White.copy(alpha = if (isSelected) 1f else 0.7f)
             )
         },
-        alwaysShowLabel = true, // Asegura que el espacio para el texto esté siempre presente y centrado
+        alwaysShowLabel = true,
         colors = NavigationBarItemDefaults.colors(
             indicatorColor = Color.White.copy(alpha = 0.2f)
         )

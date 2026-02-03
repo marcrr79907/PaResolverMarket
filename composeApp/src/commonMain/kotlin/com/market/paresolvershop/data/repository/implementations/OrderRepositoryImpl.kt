@@ -9,11 +9,17 @@ import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.query.Order as SupabaseOrderDirection
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 
 class OrderRepositoryImpl(
     private val supabase: SupabaseClient
 ) : OrderRepository {
+
+    private val _orders = MutableStateFlow<List<Order>>(emptyList())
+    override val orders: StateFlow<List<Order>> = _orders.asStateFlow()
 
     override suspend fun createOrder(order: Order, items: List<OrderItem>): DataResult<String> = withContext(Dispatchers.Default) {
         try {
@@ -28,13 +34,16 @@ class OrderRepositoryImpl(
             val itemsWithOrderId = items.map { it.copy(orderId = orderId) }
             supabase.from("order_items").insert(itemsWithOrderId)
 
+            // 3. Notificamos la creación recargando la lista
+            fetchOrders()
+
             DataResult.Success(orderId)
         } catch (e: Exception) {
             DataResult.Error(e.message ?: "Error al crear el pedido")
         }
     }
 
-    override suspend fun getMyOrders(): DataResult<List<Order>> = withContext(Dispatchers.Default) {
+    override suspend fun fetchOrders(): DataResult<Unit> = withContext(Dispatchers.Default) {
         try {
             val user = supabase.auth.currentUserOrNull() ?: return@withContext DataResult.Error("Usuario no autenticado")
             
@@ -45,7 +54,8 @@ class OrderRepositoryImpl(
                 order("created_at", SupabaseOrderDirection.DESCENDING)
             }.decodeList<Order>()
             
-            DataResult.Success(result)
+            _orders.value = result
+            DataResult.Success(Unit)
         } catch (e: Exception) {
             DataResult.Error(e.message ?: "Error al obtener tus pedidos")
         }

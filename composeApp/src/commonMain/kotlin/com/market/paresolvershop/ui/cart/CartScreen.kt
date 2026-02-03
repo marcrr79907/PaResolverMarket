@@ -179,7 +179,7 @@ fun CartScreen(cartViewModel: CartViewModel, onCheckout: () -> Unit) {
                     onClick = onCheckout,
                     modifier = Modifier.fillMaxWidth().height(56.dp),
                     shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Primary)
+                    colors = ButtonDefaults.buttonColors(containerColor = OnSurface)
                 ) {
                     Text("Check Out", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 }
