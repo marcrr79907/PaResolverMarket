@@ -17,22 +17,21 @@ class CreateProductUseCase(
         category: String,
         imageBytes: ByteArray
     ): DataResult<Unit> {
-        // 1. Validar campos básicos
+        // Validar campos básicos
         if (name.isBlank() || description.isBlank() || category.isBlank() || price <= 0) {
             return DataResult.Error("Por favor, completa todos los campos correctamente.")
         }
 
-        // 2. Subir la imagen usando el nombre del producto como pista
+        // Subir la imagen usando el nombre del producto como pista
         val imageUrlResult = storageRepository.uploadImage(imageBytes, baseNameHint = name)
 
         val imageUrl = when (imageUrlResult) {
             is DataResult.Success -> imageUrlResult.data
-            is DataResult.Error -> return imageUrlResult // Si la subida falla, detenemos el proceso
+            is DataResult.Error -> return imageUrlResult
         }
 
-        // 3. Crear el objeto Product
         val product = Product(
-            id = "", // Firestore generará el ID automáticamente
+            id = "",
             name = name,
             description = description,
             price = price,
@@ -41,7 +40,6 @@ class CreateProductUseCase(
             category = category
         )
 
-        // 4. Guardar el producto en Firestore
         return productRepository.createProduct(product)
     }
 }

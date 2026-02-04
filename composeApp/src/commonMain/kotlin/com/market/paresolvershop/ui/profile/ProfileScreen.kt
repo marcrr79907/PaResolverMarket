@@ -12,6 +12,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -54,7 +55,6 @@ fun ProfileScreen(
         ) {
             Spacer(Modifier.height(20.dp))
 
-            // 1. Perfil Foto y Nombre
             Surface(
                 modifier = Modifier.size(120.dp),
                 shape = CircleShape,
@@ -85,7 +85,6 @@ fun ProfileScreen(
 
             Spacer(Modifier.height(32.dp))
 
-            // 2. Card de Funciones Comunes
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -114,14 +113,12 @@ fun ProfileScreen(
 
                     Spacer(Modifier.height(24.dp))
 
-                    // 3. Botones de Acción Estilo Lista
                     ActionListItem("Rating and Review", FontAwesomeIcons.Solid.Pen)
                     ActionListItem("Contact Support", FontAwesomeIcons.Solid.Phone)
                     ActionListItem("Social Media Link", FontAwesomeIcons.Solid.ShareAlt)
 
                     Spacer(Modifier.height(24.dp))
 
-                    // 4. Logout Button
                     Button(
                         onClick = onLogout,
                         modifier = Modifier
@@ -141,10 +138,11 @@ fun ProfileScreen(
 
 @Composable
 fun ProfileGridItem(label: String, icon: ImageVector, onClick: (() -> Unit)?) {
-    val alpha = if (onClick != null) 1f else 0.3f
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.clickable(enabled = onClick != null) { onClick?.invoke() }.alpha(alpha)
+        modifier = Modifier
+            .alpha(if (onClick != null) 1f else 0.3f)
+            .clickable(enabled = onClick != null) { onClick?.invoke() }
     ) {
         Surface(
             modifier = Modifier.size(65.dp),
@@ -189,9 +187,6 @@ fun ActionListItem(label: String, icon: ImageVector) {
         }
     }
 }
-
-// Necesario para el ProfileGridItem
-private fun Modifier.alpha(alpha: Float): Modifier = this.then(Modifier.background(Color.Transparent)) // Dummy, use graphicsLayer if needed
 
 @Composable
 fun GuestProfileScreen(

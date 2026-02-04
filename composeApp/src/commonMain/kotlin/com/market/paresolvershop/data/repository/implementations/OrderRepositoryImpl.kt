@@ -4,6 +4,7 @@ import com.market.paresolvershop.data.model.OrderEntity
 import com.market.paresolvershop.data.model.OrderItemEntity
 import com.market.paresolvershop.data.model.toDomain
 import com.market.paresolvershop.data.model.toEntity
+import com.market.paresolvershop.data.repository.AuthRepository
 import com.market.paresolvershop.data.repository.OrderRepository
 import com.market.paresolvershop.domain.model.DataResult
 import com.market.paresolvershop.domain.model.Order
@@ -14,18 +15,36 @@ import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.query.Columns
 import io.github.jan.supabase.postgrest.query.Order as SupabaseOrderDirection
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class OrderRepositoryImpl(
-    private val supabase: SupabaseClient
+    private val supabase: SupabaseClient,
+    private val authRepository: AuthRepository
 ) : OrderRepository {
 
+    private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val _orders = MutableStateFlow<List<Order>>(emptyList())
     override val orders: StateFlow<List<Order>> = _orders.asStateFlow()
+
+    init {
+        // Observamos el estado de auth para reaccionar automáticamente
+        repositoryScope.launch {
+            authRepository.authState.collect { user ->
+                if (user != null) {
+                    fetchOrders()
+                } else {
+                    _orders.value = emptyList()
+                }
+            }
+        }
+    }
 
     override suspend fun createOrder(order: Order, items: List<OrderItem>): DataResult<String> = withContext(Dispatchers.Default) {
         try {

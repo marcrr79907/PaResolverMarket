@@ -75,6 +75,7 @@ object CatalogScreen : Screen {
         
         val uiState by viewModel.uiState.collectAsState()
         val profileState by profileViewModel.uiState.collectAsState()
+        val selectedCategoryId by viewModel.selectedCategory.collectAsState()
 
         val userName = when (val state = profileState) {
             is ProfileUiState.Authenticated -> state.user.name
@@ -87,9 +88,12 @@ object CatalogScreen : Screen {
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = Primary)
                 }
                 is CatalogUiState.Success -> {
+                    val state = uiState as CatalogUiState.Success
                     CatalogGridContent(
                         userName = userName,
-                        products = (uiState as CatalogUiState.Success).products,
+                        products = state.products,
+                        selectedCategoryId = selectedCategoryId,
+                        onCategorySelect = { viewModel.selectCategory(it) },
                         onProductClick = { productId ->
                             navigator.push(ProductDetailScreen(productId))
                         },
@@ -114,6 +118,8 @@ object CatalogScreen : Screen {
 fun CatalogGridContent(
     userName: String,
     products: List<Product>,
+    selectedCategoryId: String?,
+    onCategorySelect: (String?) -> Unit,
     onProductClick: (String) -> Unit,
     onSearchClick: () -> Unit
 ) {
@@ -123,7 +129,12 @@ fun CatalogGridContent(
     ) {
         item { HeaderSection(userName, onSearchClick) }
         item { PromoBanner() }
-        item { CategoriesSection() }
+        item { 
+            CategoriesSection(
+                selectedCategoryId = selectedCategoryId,
+                onCategorySelect = onCategorySelect
+            ) 
+        }
         
         item {
             Row(
@@ -132,37 +143,47 @@ fun CatalogGridContent(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    "Recomendados",
+                    if (selectedCategoryId == null) "Recomendados" else "Resultados",
                     fontFamily = SpaceGrotesk,
                     fontWeight = FontWeight.Bold,
                     fontSize = 20.sp
                 )
-                Text(
-                    "Ver todo",
-                    color = Primary,
-                    style = MaterialTheme.typography.labelLarge,
-                    modifier = Modifier.clickable { }
-                )
+                if (selectedCategoryId != null) {
+                    Text(
+                        "Limpiar",
+                        color = Primary,
+                        style = MaterialTheme.typography.labelLarge,
+                        modifier = Modifier.clickable { onCategorySelect(null) }
+                    )
+                }
             }
         }
 
-        items(products.chunked(2)) { pair ->
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                pair.forEach { product ->
-                    ProductGridItem(
-                        product = product,
-                        modifier = Modifier.weight(1f),
-                        onClick = { onProductClick(product.id) }
-                    )
-                }
-                if (pair.size == 1) {
-                    Spacer(modifier = Modifier.weight(1f))
+        if (products.isEmpty()) {
+            item {
+                Box(modifier = Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) {
+                    Text("No se encontraron productos", style = MaterialTheme.typography.bodyMedium)
                 }
             }
-            Spacer(modifier = Modifier.height(16.dp))
+        } else {
+            items(products.chunked(2)) { pair ->
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    pair.forEach { product ->
+                        ProductGridItem(
+                            product = product,
+                            modifier = Modifier.weight(1f),
+                            onClick = { onProductClick(product.id) }
+                        )
+                    }
+                    if (pair.size == 1) {
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+            }
         }
     }
 }
@@ -255,13 +276,16 @@ fun PromoBanner() {
 }
 
 @Composable
-fun CategoriesSection() {
+fun CategoriesSection(
+    selectedCategoryId: String?,
+    onCategorySelect: (String?) -> Unit
+) {
     val categories = listOf(
-        "PC" to FontAwesomeIcons.Solid.Laptop,
-        "Móvil" to FontAwesomeIcons.Solid.MobileAlt,
-        "Audio" to FontAwesomeIcons.Solid.Headphones,
-        "Cámara" to FontAwesomeIcons.Solid.Camera,
-        "Juegos" to FontAwesomeIcons.Solid.Gamepad
+        Triple("PC", "pc", FontAwesomeIcons.Solid.Laptop),
+        Triple("Móvil", "movil", FontAwesomeIcons.Solid.MobileAlt),
+        Triple("Audio", "audio", FontAwesomeIcons.Solid.Headphones),
+        Triple("Cámara", "camara", FontAwesomeIcons.Solid.Camera),
+        Triple("Juegos", "juegos", FontAwesomeIcons.Solid.Gamepad)
     )
 
     Column(modifier = Modifier.padding(top = 24.dp)) {
@@ -270,33 +294,44 @@ fun CategoriesSection() {
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text("Categorías", fontFamily = SpaceGrotesk, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-            Text("Ver todo", color = Primary, style = MaterialTheme.typography.labelLarge)
+            Text(
+                "Ver todo", 
+                color = Primary, 
+                style = MaterialTheme.typography.labelLarge,
+                modifier = Modifier.clickable { onCategorySelect(null) }
+            )
         }
         LazyRow(
             contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            items(categories) { category ->
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            items(categories) { (name, id, icon) ->
+                val isSelected = selectedCategoryId == id
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.clickable { onCategorySelect(if (isSelected) null else id) }
+                ) {
                     Surface(
                         shape = RoundedCornerShape(12.dp),
-                        color = if (category.first == "PC") Primary else MaterialTheme.colorScheme.surface,
-                        border = if (category.first == "PC") null else BorderStroke(1.dp, SurfaceVariant),
+                        color = if (isSelected) Primary else MaterialTheme.colorScheme.surface,
+                        border = if (isSelected) null else BorderStroke(1.dp, SurfaceVariant),
                         modifier = Modifier.size(60.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
-                                imageVector = category.second,
+                                imageVector = icon,
                                 contentDescription = null,
                                 modifier = Modifier.size(24.dp),
-                                tint = if (category.first == "PC") Color.White else MaterialTheme.colorScheme.onSurface
+                                tint = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface
                             )
                         }
                     }
                     Text(
-                        category.first,
+                        name,
                         modifier = Modifier.padding(top = 8.dp),
-                        style = MaterialTheme.typography.labelMedium
+                        style = MaterialTheme.typography.labelMedium,
+                        color = if (isSelected) Primary else MaterialTheme.colorScheme.onSurface,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                     )
                 }
             }
@@ -310,54 +345,70 @@ fun ProductGridItem(product: Product, modifier: Modifier = Modifier, onClick: ()
         modifier = modifier.clickable { onClick() },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        border = BorderStroke(1.dp, SurfaceVariant)
     ) {
         Column {
-            Box(modifier = Modifier.fillMaxWidth().height(140.dp).background(SurfaceVariant)) {
-                if (product.imageUrl != null) {
-                    AsyncImage(
-                        model = product.imageUrl,
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
-                    )
-                }
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(150.dp)
+                    .background(SurfaceVariant)
+            ) {
+                AsyncImage(
+                    model = product.imageUrl,
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
                 Surface(
-                    modifier = Modifier.align(Alignment.TopEnd).padding(8.dp),
+                    modifier = Modifier.padding(8.dp).align(Alignment.TopEnd),
                     shape = CircleShape,
-                    color = Color.White.copy(alpha = 0.7f)
+                    color = Color.White.copy(alpha = 0.8f)
                 ) {
                     Icon(
                         imageVector = FontAwesomeIcons.Solid.Heart,
                         contentDescription = null,
                         modifier = Modifier.padding(6.dp).size(14.dp),
-                        tint = Primary
+                        tint = Color.Gray
                     )
                 }
             }
             Column(modifier = Modifier.padding(12.dp)) {
                 Text(
                     product.name,
-                    fontFamily = Inter,
-                    fontWeight = FontWeight.Medium,
-                    maxLines = 1,
-                    fontSize = 14.sp
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1
+                )
+                Text(
+                    product.category,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(imageVector = FontAwesomeIcons.Solid.Star, contentDescription = null, tint = Color(0xFFFFB300), modifier = Modifier.size(12.dp))
-                        Text(" 4.5", style = MaterialTheme.typography.labelSmall)
-                    }
                     Text(
                         "$${product.price}",
+                        style = MaterialTheme.typography.titleMedium,
                         color = Primary,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp
+                        fontWeight = FontWeight.Bold
                     )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = FontAwesomeIcons.Solid.Star,
+                            contentDescription = null,
+                            modifier = Modifier.size(12.dp),
+                            tint = Color(0xFFFFB800)
+                        )
+                        Text(
+                            " 4.5",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
         }

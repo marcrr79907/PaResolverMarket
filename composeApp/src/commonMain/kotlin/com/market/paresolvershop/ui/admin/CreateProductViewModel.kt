@@ -17,11 +17,10 @@ data class CreateProductFormState(
     val description: String = "",
     val price: String = "",
     val stock: String = "",
-    val category: String = "",
+    val categoryId: String = "",
     val imageBytes: ByteArray? = null
 )
 
-// Estado para la pantalla en general
 sealed interface CreateProductScreenState {
     data object Idle : CreateProductScreenState
     data object Loading : CreateProductScreenState
@@ -39,29 +38,12 @@ class CreateProductViewModel(
     private val _screenState = MutableStateFlow<CreateProductScreenState>(CreateProductScreenState.Idle)
     val screenState = _screenState.asStateFlow()
 
-    fun onNameChange(name: String) {
-        formState = formState.copy(name = name)
-    }
-
-    fun onDescriptionChange(description: String) {
-        formState = formState.copy(description = description)
-    }
-
-    fun onPriceChange(price: String) {
-        formState = formState.copy(price = price)
-    }
-
-    fun onStockChange(stock: String) {
-        formState = formState.copy(stock = stock)
-    }
-
-    fun onCategoryChange(category: String) {
-        formState = formState.copy(category = category)
-    }
-
-    fun onImageSelected(bytes: ByteArray?) {
-        formState = formState.copy(imageBytes = bytes)
-    }
+    fun onNameChange(name: String) { formState = formState.copy(name = name) }
+    fun onDescriptionChange(description: String) { formState = formState.copy(description = description) }
+    fun onPriceChange(price: String) { formState = formState.copy(price = price) }
+    fun onStockChange(stock: String) { formState = formState.copy(stock = stock) }
+    fun onCategoryChange(categoryId: String) { formState = formState.copy(categoryId = categoryId) }
+    fun onImageSelected(bytes: ByteArray?) { formState = formState.copy(imageBytes = bytes) }
 
     fun createProduct() {
         viewModelScope.launch {
@@ -69,11 +51,6 @@ class CreateProductViewModel(
 
             val priceDouble = formState.price.toDoubleOrNull() ?: 0.0
             val stockInt = formState.stock.toIntOrNull() ?: 0
-
-//            if (formState.imageBytes == null) {
-//                _screenState.value = CreateProductScreenState.Error("Debes seleccionar una imagen.")
-//                return@launch
-//            }
             val imageBytesToSend = formState.imageBytes ?: byteArrayOf()
 
             val result = createProductUseCase(
@@ -81,8 +58,7 @@ class CreateProductViewModel(
                 description = formState.description,
                 price = priceDouble,
                 stock = stockInt,
-                category = formState.category,
-//                imageBytes = formState.imageBytes!!
+                category = formState.categoryId,
                 imageBytes = imageBytesToSend
             )
 

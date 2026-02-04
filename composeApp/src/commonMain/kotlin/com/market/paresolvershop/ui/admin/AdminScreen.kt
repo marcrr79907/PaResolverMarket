@@ -51,11 +51,15 @@ object AdminScreen : Screen {
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Text("Gestión de Inventario", style = MaterialTheme.typography.titleLarge)
+                Text("Gestión de Negocio", style = MaterialTheme.typography.titleLarge)
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Button(onClick = { navigator.push(InventoryScreen) }, modifier = Modifier.fillMaxWidth()) {
-                    Text("Gestionar Inventario")
+                    Text("Gestionar Productos e Inventario")
+                }
+                
+                Button(onClick = { navigator.push(CategoryManagementScreen) }, modifier = Modifier.fillMaxWidth()) {
+                    Text("Gestionar Categorías")
                 }
             }
         }
