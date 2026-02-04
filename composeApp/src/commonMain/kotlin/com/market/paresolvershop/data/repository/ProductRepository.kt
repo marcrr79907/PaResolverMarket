@@ -10,6 +10,9 @@ interface ProductRepository {
     suspend fun fetchProducts(categoryId: String? = null): DataResult<Unit>
     
     // Para el Admin y Vendedores
+    suspend fun createProduct(product: Product): DataResult<Unit>
+    suspend fun updateProduct(product: Product): DataResult<Unit>
+    suspend fun deleteProduct(productId: String): DataResult<Unit>
     suspend fun getAllProductsAdmin(): DataResult<List<Product>>
     suspend fun updateProductStatus(productId: String, status: String): DataResult<Unit>
 }

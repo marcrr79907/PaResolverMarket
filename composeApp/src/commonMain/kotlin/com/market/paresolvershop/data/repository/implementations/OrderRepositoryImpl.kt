@@ -67,10 +67,13 @@ class OrderRepositoryImpl(
 
     override suspend fun fetchOrders(): DataResult<Unit> = withContext(Dispatchers.Default) {
         try {
-            val user = supabase.auth.currentUserOrNull() ?: return@withContext DataResult.Error("Inicia sesión")
+            val user = supabase.auth.currentUserOrNull() ?:
+            return@withContext DataResult.Error("Inicia sesión")
             
             val result = supabase.from("orders").select(
-                columns = Columns.raw("*, user_addresses(first_name, last_name, address_line, phone, city)")
+                columns = Columns.raw(
+                    "*, user_addresses(*)"
+                )
             ) {
                 filter { eq("user_id", user.id) }
                 order("created_at", SupabaseOrderDirection.DESCENDING)

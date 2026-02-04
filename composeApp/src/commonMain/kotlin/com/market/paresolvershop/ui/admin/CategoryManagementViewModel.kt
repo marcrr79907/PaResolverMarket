@@ -19,10 +19,14 @@ class CategoryManagementViewModel(
 ) : ViewModel() {
 
     val uiState: StateFlow<CategoryUiState> = repository.getCategories()
-        .map { CategoryUiState.Success(it) }
+        .map<List<Category>, CategoryUiState> { CategoryUiState.Success(it) }
         .onStart { emit(CategoryUiState.Loading) }
         .catch { emit(CategoryUiState.Error(it.message ?: "Error desconocido")) }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), CategoryUiState.Loading)
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = CategoryUiState.Loading
+        )
 
     private val _actionState = MutableStateFlow<DataResult<Unit>?>(null)
     val actionState = _actionState.asStateFlow()
@@ -36,9 +40,20 @@ class CategoryManagementViewModel(
         }
     }
 
+    fun updateCategory(category: Category) {
+        if (category.name.isBlank()) return
+        viewModelScope.launch {
+            _actionState.value = null
+            val result = repository.updateCategory(category)
+            _actionState.value = result
+        }
+    }
+
     fun deleteCategory(id: String) {
         viewModelScope.launch {
-            repository.deleteCategory(id)
+            _actionState.value = null
+            val result = repository.deleteCategory(id)
+            _actionState.value = result
         }
     }
     

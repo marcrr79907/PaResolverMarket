@@ -43,23 +43,18 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import coil3.compose.AsyncImage
+import com.market.paresolvershop.domain.model.Category
 import com.market.paresolvershop.domain.model.Product
-import com.market.paresolvershop.ui.search.SearchScreen
 import com.market.paresolvershop.ui.profile.ProfileUiState
 import com.market.paresolvershop.ui.profile.ProfileViewModel
-import com.market.paresolvershop.ui.theme.Inter
+import com.market.paresolvershop.ui.search.SearchScreen
 import com.market.paresolvershop.ui.theme.Primary
 import com.market.paresolvershop.ui.theme.SpaceGrotesk
 import com.market.paresolvershop.ui.theme.SurfaceVariant
 import compose.icons.FontAwesomeIcons
 import compose.icons.fontawesomeicons.Solid
 import compose.icons.fontawesomeicons.solid.Bell
-import compose.icons.fontawesomeicons.solid.Camera
-import compose.icons.fontawesomeicons.solid.Gamepad
-import compose.icons.fontawesomeicons.solid.Headphones
 import compose.icons.fontawesomeicons.solid.Heart
-import compose.icons.fontawesomeicons.solid.Laptop
-import compose.icons.fontawesomeicons.solid.MobileAlt
 import compose.icons.fontawesomeicons.solid.Search
 import compose.icons.fontawesomeicons.solid.Star
 import org.koin.compose.viewmodel.koinViewModel
@@ -75,7 +70,6 @@ object CatalogScreen : Screen {
         
         val uiState by viewModel.uiState.collectAsState()
         val profileState by profileViewModel.uiState.collectAsState()
-        val selectedCategoryId by viewModel.selectedCategory.collectAsState()
 
         val userName = when (val state = profileState) {
             is ProfileUiState.Authenticated -> state.user.name
@@ -92,7 +86,8 @@ object CatalogScreen : Screen {
                     CatalogGridContent(
                         userName = userName,
                         products = state.products,
-                        selectedCategoryId = selectedCategoryId,
+                        categories = state.categories,
+                        selectedCategoryId = state.selectedCategoryId,
                         onCategorySelect = { viewModel.selectCategory(it) },
                         onProductClick = { productId ->
                             navigator.push(ProductDetailScreen(productId))
@@ -118,6 +113,7 @@ object CatalogScreen : Screen {
 fun CatalogGridContent(
     userName: String,
     products: List<Product>,
+    categories: List<Category>,
     selectedCategoryId: String?,
     onCategorySelect: (String?) -> Unit,
     onProductClick: (String) -> Unit,
@@ -131,6 +127,7 @@ fun CatalogGridContent(
         item { PromoBanner() }
         item { 
             CategoriesSection(
+                categories = categories,
                 selectedCategoryId = selectedCategoryId,
                 onCategorySelect = onCategorySelect
             ) 
@@ -183,6 +180,54 @@ fun CatalogGridContent(
                     }
                 }
                 Spacer(modifier = Modifier.height(16.dp))
+            }
+        }
+    }
+}
+
+@Composable
+fun CategoriesSection(
+    categories: List<Category>,
+    selectedCategoryId: String?,
+    onCategorySelect: (String?) -> Unit
+) {
+    if (categories.isEmpty()) return
+
+    Column(modifier = Modifier.padding(top = 24.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text("Categorías", fontFamily = SpaceGrotesk, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            Text(
+                "Ver todo", 
+                color = Primary, 
+                style = MaterialTheme.typography.labelLarge,
+                modifier = Modifier.clickable { onCategorySelect(null) }
+            )
+        }
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            items(categories) { category ->
+                val isSelected = selectedCategoryId == category.id
+                Surface(
+                    shape = RoundedCornerShape(20.dp),
+                    color = if (isSelected) Primary else SurfaceVariant.copy(alpha = 0.5f),
+                    border = if (isSelected) null else BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.3f)),
+                    modifier = Modifier.clickable { 
+                        onCategorySelect(if (isSelected) null else category.id) 
+                    }
+                ) {
+                    Text(
+                        text = category.name,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                    )
+                }
             }
         }
     }
@@ -263,76 +308,6 @@ fun PromoBanner() {
                     shape = RoundedCornerShape(8.dp)
                 ) {
                     Text("Comprar ahora", color = Primary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                }
-            }
-            Icon(
-                imageVector = FontAwesomeIcons.Solid.Laptop,
-                contentDescription = null,
-                modifier = Modifier.size(100.dp),
-                tint = Color.White.copy(alpha = 0.3f)
-            )
-        }
-    }
-}
-
-@Composable
-fun CategoriesSection(
-    selectedCategoryId: String?,
-    onCategorySelect: (String?) -> Unit
-) {
-    val categories = listOf(
-        Triple("PC", "pc", FontAwesomeIcons.Solid.Laptop),
-        Triple("Móvil", "movil", FontAwesomeIcons.Solid.MobileAlt),
-        Triple("Audio", "audio", FontAwesomeIcons.Solid.Headphones),
-        Triple("Cámara", "camara", FontAwesomeIcons.Solid.Camera),
-        Triple("Juegos", "juegos", FontAwesomeIcons.Solid.Gamepad)
-    )
-
-    Column(modifier = Modifier.padding(top = 24.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text("Categorías", fontFamily = SpaceGrotesk, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-            Text(
-                "Ver todo", 
-                color = Primary, 
-                style = MaterialTheme.typography.labelLarge,
-                modifier = Modifier.clickable { onCategorySelect(null) }
-            )
-        }
-        LazyRow(
-            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            items(categories) { (name, id, icon) ->
-                val isSelected = selectedCategoryId == id
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.clickable { onCategorySelect(if (isSelected) null else id) }
-                ) {
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = if (isSelected) Primary else MaterialTheme.colorScheme.surface,
-                        border = if (isSelected) null else BorderStroke(1.dp, SurfaceVariant),
-                        modifier = Modifier.size(60.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = icon,
-                                contentDescription = null,
-                                modifier = Modifier.size(24.dp),
-                                tint = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-                    }
-                    Text(
-                        name,
-                        modifier = Modifier.padding(top = 8.dp),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = if (isSelected) Primary else MaterialTheme.colorScheme.onSurface,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                    )
                 }
             }
         }

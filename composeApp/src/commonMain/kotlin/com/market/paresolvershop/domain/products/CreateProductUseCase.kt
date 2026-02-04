@@ -14,11 +14,11 @@ class CreateProductUseCase(
         description: String,
         price: Double,
         stock: Int,
-        category: String,
+        categoryId: String,
         imageBytes: ByteArray
     ): DataResult<Unit> {
         // Validar campos básicos
-        if (name.isBlank() || description.isBlank() || category.isBlank() || price <= 0) {
+        if (name.isBlank() || description.isBlank() || categoryId.isBlank() || price <= 0) {
             return DataResult.Error("Por favor, completa todos los campos correctamente.")
         }
 
@@ -37,7 +37,8 @@ class CreateProductUseCase(
             price = price,
             stock = stock,
             imageUrl = imageUrl,
-            category = category
+            category = "",
+            categoryId = categoryId
         )
 
         return productRepository.createProduct(product)

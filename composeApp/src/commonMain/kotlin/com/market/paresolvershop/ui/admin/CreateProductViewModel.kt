@@ -58,7 +58,7 @@ class CreateProductViewModel(
                 description = formState.description,
                 price = priceDouble,
                 stock = stockInt,
-                category = formState.categoryId,
+                categoryId = formState.categoryId,
                 imageBytes = imageBytesToSend
             )
 

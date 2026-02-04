@@ -33,8 +33,11 @@ data class EditProductScreen(val product: Product) : Screen {
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
         val viewModel = koinViewModel<EditProductViewModel> { parametersOf(product) }
+        val categoryViewModel = koinViewModel<CategoryManagementViewModel>()
+        
         val formState = viewModel.formState
         val screenState by viewModel.screenState.collectAsState()
+        val categoriesState by categoryViewModel.uiState.collectAsState()
 
         val snackbarHostState = remember { SnackbarHostState() }
         var showImagePicker by remember { mutableStateOf(false) }
@@ -76,18 +79,17 @@ data class EditProductScreen(val product: Product) : Screen {
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // Show new image preview if selected, otherwise show original image
                     val imageModifier = Modifier.size(150.dp)
                     formState.imageBytes?.let {
                         Image(
                             painter = rememberAsyncImagePainter(it),
-                            contentDescription = "Vista previa del producto",
+                            contentDescription = "Vista previa",
                             modifier = imageModifier,
                             contentScale = ContentScale.Crop
                         )
                     } ?: AsyncImage(
                         model = product.imageUrl,
-                        contentDescription = "Imagen actual del producto",
+                        contentDescription = "Imagen actual",
                         modifier = imageModifier,
                         contentScale = ContentScale.Crop
                     )
@@ -100,9 +102,18 @@ data class EditProductScreen(val product: Product) : Screen {
                     OutlinedTextField(value = formState.description, onValueChange = viewModel::onDescriptionChange, label = { Text("Descripción") }, modifier = Modifier.fillMaxWidth())
                     OutlinedTextField(value = formState.price, onValueChange = viewModel::onPriceChange, label = { Text("Precio") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
                     OutlinedTextField(value = formState.stock, onValueChange = viewModel::onStockChange, label = { Text("Stock") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
-                    OutlinedTextField(value = formState.category, onValueChange = viewModel::onCategoryChange, label = { Text("Categoría") }, modifier = Modifier.fillMaxWidth())
 
-                    Button(onClick = viewModel::updateProduct, enabled = screenState != EditProductScreenState.Loading) {
+                    CategorySelector(
+                        selectedCategoryId = formState.categoryId,
+                        categoriesState = categoriesState,
+                        onCategorySelected = { viewModel.onCategoryChange(it.id) }
+                    )
+
+                    Button(
+                        onClick = viewModel::updateProduct,
+                        enabled = screenState != EditProductScreenState.Loading && formState.categoryId.isNotEmpty(),
+                        modifier = Modifier.fillMaxWidth().padding(top = 16.dp)
+                    ) {
                         Text("Guardar Cambios")
                     }
                 }
@@ -111,10 +122,7 @@ data class EditProductScreen(val product: Product) : Screen {
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                 }
 
-                SnackbarHost(
-                    hostState = snackbarHostState,
-                    modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 16.dp)
-                )
+                SnackbarHost(hostState = snackbarHostState, modifier = Modifier.align(Alignment.BottomCenter))
             }
         }
     }

@@ -1,5 +1,8 @@
 package com.market.paresolvershop.data.repository.implementations
 
+import com.market.paresolvershop.data.model.ProductEntity
+import com.market.paresolvershop.data.model.toDomain
+import com.market.paresolvershop.data.model.toEntity
 import com.market.paresolvershop.data.repository.ProductRepository
 import com.market.paresolvershop.domain.model.DataResult
 import com.market.paresolvershop.domain.model.Product
@@ -15,7 +18,6 @@ class ProductRepositoryImpl(
     private val supabase: SupabaseClient
 ) : ProductRepository {
 
-    // Gatillo para forzar la recarga de los flujos de productos
     private val refreshTrigger = MutableSharedFlow<Unit>(replay = 1)
 
     override fun getProducts(categoryId: String?): Flow<List<Product>> {
@@ -24,14 +26,13 @@ class ProductRepositoryImpl(
                 try {
                     val result = supabase.from("products").select {
                         filter {
-                            // En el marketplace, el cliente solo ve productos aprobados
                             eq("status", "approved") 
                             if (categoryId != null) {
                                 eq("category_id", categoryId)
                             }
                         }
-                    }.decodeList<Product>()
-                    emit(result)
+                    }.decodeList<ProductEntity>()
+                    emit(result.map { it.toDomain() })
                 } catch (e: Exception) {
                     emit(emptyList())
                 }
@@ -45,17 +46,45 @@ class ProductRepositoryImpl(
     }
 
     override suspend fun getProductById(id: String): DataResult<Product> = runCatching {
-        val product = supabase.from("products").select {
+        val entity = supabase.from("products").select {
             filter { eq("id", id) }
-        }.decodeSingle<Product>()
-        DataResult.Success(product)
+        }.decodeSingle<ProductEntity>()
+        DataResult.Success(entity.toDomain())
     }.getOrElse {
         DataResult.Error(it.message ?: "Error al obtener el producto")
     }
 
+    override suspend fun createProduct(product: Product): DataResult<Unit> = runCatching {
+        supabase.from("products").insert(product.toEntity())
+        refreshTrigger.emit(Unit)
+        DataResult.Success(Unit)
+    }.getOrElse {
+        DataResult.Error(it.message ?: "Error al crear producto")
+    }
+
+    override suspend fun updateProduct(product: Product): DataResult<Unit> = runCatching {
+        supabase.from("products").update(product.toEntity()) {
+            filter { eq("id", product.id) }
+        }
+        refreshTrigger.emit(Unit)
+        DataResult.Success(Unit)
+    }.getOrElse {
+        DataResult.Error(it.message ?: "Error al actualizar producto")
+    }
+
+    override suspend fun deleteProduct(productId: String): DataResult<Unit> = runCatching {
+        supabase.from("products").delete {
+            filter { eq("id", productId) }
+        }
+        refreshTrigger.emit(Unit)
+        DataResult.Success(Unit)
+    }.getOrElse {
+        DataResult.Error(it.message ?: "Error al eliminar producto")
+    }
+
     override suspend fun getAllProductsAdmin(): DataResult<List<Product>> = runCatching {
-        val result = supabase.from("products").select().decodeList<Product>()
-        DataResult.Success(result)
+        val result = supabase.from("products").select().decodeList<ProductEntity>()
+        DataResult.Success(result.map { it.toDomain() })
     }.getOrElse {
         DataResult.Error(it.message ?: "Error al cargar inventario")
     }
@@ -64,8 +93,7 @@ class ProductRepositoryImpl(
         supabase.from("products").update(mapOf("status" to status)) {
             filter { eq("id", productId) }
         }
-        // Refrescamos los flujos globales para que la Home se actualice si se aprueba algo
-        fetchProducts()
+        refreshTrigger.emit(Unit)
         DataResult.Success(Unit)
     }.getOrElse {
         DataResult.Error(it.message ?: "Error al actualizar estado")

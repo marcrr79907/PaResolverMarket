@@ -47,12 +47,10 @@ object RegisterScreen : Screen {
         LaunchedEffect(state) {
             when (state) {
                 is RegisterUiState.Success -> {
-                    // Si el registro es exitoso pero requiere confirmación, informamos al usuario
                     snackbarHostState.showSnackbar(
                         "Cuenta creada. Por favor, revisa tu email para confirmarla.",
                         duration = SnackbarDuration.Long
                     )
-                    // Podríamos redirigir al Login o simplemente cerrar
                     navigator.pop()
                 }
                 is RegisterUiState.Error -> {
@@ -87,7 +85,7 @@ object RegisterScreen : Screen {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Top
             ) {
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(8.dp))
                 
                 Text(
                     text = "Crea tu Cuenta",
@@ -101,7 +99,7 @@ object RegisterScreen : Screen {
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                Spacer(Modifier.height(32.dp))
+                Spacer(Modifier.height(24.dp))
 
                 OutlinedTextField(
                     value = name,
@@ -115,7 +113,7 @@ object RegisterScreen : Screen {
                     singleLine = true
                 )
 
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(12.dp))
 
                 OutlinedTextField(
                     value = email,
@@ -131,7 +129,7 @@ object RegisterScreen : Screen {
                     singleLine = true
                 )
 
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(12.dp))
 
                 OutlinedTextField(
                     value = password,
@@ -152,7 +150,7 @@ object RegisterScreen : Screen {
                     singleLine = true
                 )
 
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(12.dp))
 
                 OutlinedTextField(
                     value = confirmPassword,
@@ -173,7 +171,7 @@ object RegisterScreen : Screen {
                     singleLine = true
                 )
 
-                Spacer(Modifier.height(32.dp))
+                Spacer(Modifier.height(24.dp))
 
                 Button(
                     onClick = { viewModel.onRegisterClick(name, email, password, confirmPassword) },
@@ -192,7 +190,7 @@ object RegisterScreen : Screen {
                     }
                 }
 
-                Spacer(Modifier.height(24.dp))
+                Spacer(Modifier.height(16.dp))
                 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     HorizontalDivider(modifier = Modifier.weight(1f))
@@ -200,7 +198,7 @@ object RegisterScreen : Screen {
                     HorizontalDivider(modifier = Modifier.weight(1f))
                 }
 
-                Spacer(Modifier.height(24.dp))
+                Spacer(Modifier.height(16.dp))
 
                 GoogleAuthUiProvider(
                     onGoogleSignInResult = { idToken, nonce ->
@@ -227,13 +225,13 @@ object RegisterScreen : Screen {
                     }
                 }
 
-                Spacer(Modifier.height(24.dp))
+                Spacer(Modifier.height(16.dp))
 
                 TextButton(onClick = { navigator.pop() }) {
                     Text("¿Ya tienes cuenta? Inicia sesión")
                 }
                 
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(32.dp))
             }
         }
     }

@@ -1,48 +1,49 @@
 package com.market.paresolvershop.data.model
 
 import com.market.paresolvershop.domain.model.Product
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 
-/**
- * Clase que se mapea directamente a/desde Supabase.
- * */
+@Serializable
 data class ProductEntity(
-    val id: String = "",
-    val name: String = "",
-    val description: String = "",
-    val price: Double = 0.0,
-    val stock: Int = 0,
-    val imageUrl: String? = null,
-    val category: String = ""
+    @SerialName("id") val id: String? = null,
+    @SerialName("name") val name: String,
+    @SerialName("description") val description: String,
+    @SerialName("price") val price: Double,
+    @SerialName("stock") val stock: Int,
+    @SerialName("image_url") val imageUrl: String? = null,
+    @SerialName("category") val category: String,
+    @SerialName("category_id") val categoryId: String? = null,
+    @SerialName("vendor_id") val vendorId: String? = null,
+    @SerialName("status") val status: String = "approved"
 )
 
-/**
- * Función de extensión para convertir el objeto de Datos (Entity)
- * al objeto de Dominio (el que usa la app).
- * */
 fun ProductEntity.toDomain(): Product {
     return Product(
-        id = this.id,
+        id = this.id ?: "",
         name = this.name,
         description = this.description,
         price = this.price,
         stock = this.stock,
         imageUrl = this.imageUrl,
-        category = this.category
+        category = this.category,
+        categoryId = this.categoryId,
+        vendorId = this.vendorId,
+        status = this.status
     )
 }
 
-/**
- * Función de extensión para convertir el objeto de Dominio (el que usa la app)
- * al objeto de Datos (Entity).
- * */
 fun Product.toEntity(): ProductEntity {
     return ProductEntity(
-        id = this.id,
+        id = if (this.id.isBlank()) null else this.id,
         name = this.name,
         description = this.description,
         price = this.price,
         stock = this.stock,
         imageUrl = this.imageUrl,
-        category = this.category
+        category = this.category,
+        categoryId = this.categoryId,
+        vendorId = this.vendorId,
+        status = this.status
     )
 }

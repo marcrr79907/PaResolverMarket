@@ -1,5 +1,8 @@
 package com.market.paresolvershop.data.repository.implementations
 
+import com.market.paresolvershop.data.model.CartItemEntity
+import com.market.paresolvershop.data.model.toDomain
+import com.market.paresolvershop.data.model.toEntity
 import com.market.paresolvershop.data.repository.AuthRepository
 import com.market.paresolvershop.data.repository.CartRepository
 import com.market.paresolvershop.domain.model.CartItem
@@ -7,22 +10,12 @@ import com.market.paresolvershop.domain.model.DataResult
 import com.market.paresolvershop.domain.model.Product
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.query.Columns
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onStart
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
-
-@Serializable
-data class CartItemEntity(
-    @SerialName("user_id")
-    val userId: String,
-    @SerialName("product_id")
-    val productId: String,
-    val quantity: Int
-)
 
 class CartRepositoryImpl(
     private val supabase: SupabaseClient,
@@ -33,12 +26,12 @@ class CartRepositoryImpl(
 
     override fun getCartItems(): Flow<List<CartItem>> {
         return cartRefreshTrigger.onStart { emit(Unit) }.flatMapLatest {
-            val user = authRepository.getCurrentUser()
+            val userId = authRepository.getCurrentUser()?.id
             flow {
-                if (user == null) {
+                if (userId == null) {
                     emit(emptyList())
                 } else {
-                    emit(fetchCartItemsForUser(user.id))
+                    emit(fetchCartItemsForUser(userId))
                 }
             }
         }
@@ -46,18 +39,16 @@ class CartRepositoryImpl(
 
     private suspend fun fetchCartItemsForUser(userId: String): List<CartItem> {
         return try {
-            val cartEntities = supabase.from("cart_items")
-                .select()
+            // Usamos select con join de products para traer todo en una sola consulta
+            val entities = supabase.from("cart_items")
+                .select(
+                    columns = Columns.raw("*, products(*)")
+                ) {
+                    filter { eq("user_id", userId) }
+                }
                 .decodeList<CartItemEntity>()
-                .filter { it.userId == userId }
 
-            cartEntities.mapNotNull { cartEntity ->
-                val product = supabase.from("products")
-                    .select { filter { eq("id", cartEntity.productId) } }
-                    .decodeSingleOrNull<Product>()
-
-                product?.let { CartItem(product = it, quantity = cartEntity.quantity) }
-            }
+            entities.mapNotNull { it.toDomain() }
         } catch (e: Exception) {
             emptyList()
         }
@@ -79,13 +70,14 @@ class CartRepositoryImpl(
                 } else return DataResult.Error("Sin stock suficiente")
             } else {
                 if (product.stock >= quantity) {
-                    supabase.from("cart_items").insert(CartItemEntity(userId, product.id, quantity))
+                    val cartItem = CartItem(product, quantity)
+                    supabase.from("cart_items").insert(cartItem.toEntity(userId))
                 } else return DataResult.Error("Sin stock suficiente")
             }
             cartRefreshTrigger.emit(Unit)
             DataResult.Success(Unit)
         } catch (e: Exception) {
-            DataResult.Error(e.message ?: "Error")
+            DataResult.Error(e.message ?: "Error al añadir al carrito")
         }
     }
 
@@ -102,7 +94,7 @@ class CartRepositoryImpl(
             cartRefreshTrigger.emit(Unit)
             DataResult.Success(Unit)
         } catch (e: Exception) {
-            DataResult.Error(e.message ?: "Error")
+            DataResult.Error(e.message ?: "Error al actualizar cantidad")
         }
     }
 
