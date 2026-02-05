@@ -27,8 +27,11 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import cafe.adriel.voyager.navigator.tab.LocalTabNavigator
 import coil3.compose.AsyncImage
 import com.market.paresolvershop.domain.model.Product
+import com.market.paresolvershop.ui.authentication.LoginScreen
+import com.market.paresolvershop.ui.authentication.RegisterScreen
 import com.market.paresolvershop.ui.cart.CartEvent
 import com.market.paresolvershop.ui.cart.CartViewModel
+import com.market.paresolvershop.ui.components.LoginPromptDialog
 import com.market.paresolvershop.ui.navigation.bottombar.ProfileTab
 import com.market.paresolvershop.ui.theme.*
 import compose.icons.FontAwesomeIcons
@@ -67,11 +70,15 @@ data class ProductDetailScreen(val productId: String) : Screen {
 
         if (showLoginDialog) {
             LoginPromptDialog(
-                onConfirm = {
+                onDismiss = { showLoginDialog = false},
+                onLoginClick = {
                     showLoginDialog = false
-                    tabNavigator.current = ProfileTab
+                    navigator.push(LoginScreen)
                 },
-                onDismiss = { showLoginDialog = false }
+                onRegisterClick = {
+                    showLoginDialog = false
+                    navigator.push(RegisterScreen)
+                }
             )
         }
 
@@ -321,23 +328,4 @@ fun ProductDetailContent(product: Product, onAddToCart: () -> Unit) {
             }
         }
     }
-}
-
-@Composable
-fun LoginPromptDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Iniciar Sesión Requerido") },
-        text = { Text("Para añadir productos a tu carrito, necesitas iniciar sesión.") },
-        confirmButton = {
-            Button(onClick = onConfirm) {
-                Text("Iniciar Sesión")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancelar")
-            }
-        }
-    )
 }

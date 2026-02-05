@@ -3,34 +3,14 @@ package com.market.paresolvershop.ui.products
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -45,6 +25,12 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import coil3.compose.AsyncImage
 import com.market.paresolvershop.domain.model.Category
 import com.market.paresolvershop.domain.model.Product
+import com.market.paresolvershop.ui.authentication.LoginScreen
+import com.market.paresolvershop.ui.authentication.RegisterScreen
+import com.market.paresolvershop.ui.cart.CartEvent
+import com.market.paresolvershop.ui.cart.CartViewModel
+import com.market.paresolvershop.ui.components.CategoryChip
+import com.market.paresolvershop.ui.components.LoginPromptDialog
 import com.market.paresolvershop.ui.profile.ProfileUiState
 import com.market.paresolvershop.ui.profile.ProfileViewModel
 import com.market.paresolvershop.ui.search.SearchScreen
@@ -55,8 +41,11 @@ import compose.icons.FontAwesomeIcons
 import compose.icons.fontawesomeicons.Solid
 import compose.icons.fontawesomeicons.solid.Bell
 import compose.icons.fontawesomeicons.solid.Heart
+import compose.icons.fontawesomeicons.solid.Plus
 import compose.icons.fontawesomeicons.solid.Search
-import compose.icons.fontawesomeicons.solid.Star
+import compose.icons.fontawesomeicons.solid.ShoppingCart
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.annotation.KoinExperimentalAPI
 
@@ -67,9 +56,37 @@ object CatalogScreen : Screen {
         val navigator = LocalNavigator.currentOrThrow
         val viewModel = koinViewModel<CatalogViewModel>()
         val profileViewModel = koinViewModel<ProfileViewModel>()
+        val cartViewModel = koinViewModel<CartViewModel>()
         
         val uiState by viewModel.uiState.collectAsState()
         val profileState by profileViewModel.uiState.collectAsState()
+        val snackbarHostState = remember { SnackbarHostState() }
+        val scope = rememberCoroutineScope()
+        
+        var showLoginPrompt by remember { mutableStateOf(false) }
+
+        LaunchedEffect(Unit) {
+            cartViewModel.eventFlow.collectLatest { event ->
+                when (event) {
+                    is CartEvent.Success -> snackbarHostState.showSnackbar(event.message)
+                    is CartEvent.Error -> snackbarHostState.showSnackbar(event.message)
+                }
+            }
+        }
+
+        if (showLoginPrompt) {
+            LoginPromptDialog(
+                onDismiss = { showLoginPrompt = false },
+                onLoginClick = {
+                    showLoginPrompt = false
+                    navigator.push(LoginScreen)
+                },
+                onRegisterClick = {
+                    showLoginPrompt = false
+                    navigator.push(RegisterScreen)
+                }
+            )
+        }
 
         val userName = when (val state = profileState) {
             is ProfileUiState.Authenticated -> state.user.name
@@ -92,6 +109,13 @@ object CatalogScreen : Screen {
                         onProductClick = { productId ->
                             navigator.push(ProductDetailScreen(productId))
                         },
+                        onAddToCart = { product ->
+                            if (cartViewModel.isUserLoggedIn()) {
+                                cartViewModel.addToCart(product)
+                            } else {
+                                showLoginPrompt = true
+                            }
+                        },
                         onSearchClick = {
                             navigator.push(SearchScreen)
                         }
@@ -105,6 +129,7 @@ object CatalogScreen : Screen {
                     )
                 }
             }
+            SnackbarHost(hostState = snackbarHostState, modifier = Modifier.align(Alignment.BottomCenter))
         }
     }
 }
@@ -117,6 +142,7 @@ fun CatalogGridContent(
     selectedCategoryId: String?,
     onCategorySelect: (String?) -> Unit,
     onProductClick: (String) -> Unit,
+    onAddToCart: (Product) -> Unit,
     onSearchClick: () -> Unit
 ) {
     LazyColumn(
@@ -145,14 +171,6 @@ fun CatalogGridContent(
                     fontWeight = FontWeight.Bold,
                     fontSize = 20.sp
                 )
-                if (selectedCategoryId != null) {
-                    Text(
-                        "Limpiar",
-                        color = Primary,
-                        style = MaterialTheme.typography.labelLarge,
-                        modifier = Modifier.clickable { onCategorySelect(null) }
-                    )
-                }
             }
         }
 
@@ -172,7 +190,8 @@ fun CatalogGridContent(
                         ProductGridItem(
                             product = product,
                             modifier = Modifier.weight(1f),
-                            onClick = { onProductClick(product.id) }
+                            onClick = { onProductClick(product.id) },
+                            onAddToCart = { onAddToCart(product) }
                         )
                     }
                     if (pair.size == 1) {
@@ -191,43 +210,33 @@ fun CategoriesSection(
     selectedCategoryId: String?,
     onCategorySelect: (String?) -> Unit
 ) {
-    if (categories.isEmpty()) return
-
     Column(modifier = Modifier.padding(top = 24.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text("Categorías", fontFamily = SpaceGrotesk, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-            Text(
-                "Ver todo", 
-                color = Primary, 
-                style = MaterialTheme.typography.labelLarge,
-                modifier = Modifier.clickable { onCategorySelect(null) }
-            )
-        }
+        Text(
+            "Categorías", 
+            modifier = Modifier.padding(horizontal = 20.dp),
+            fontFamily = SpaceGrotesk, 
+            fontWeight = FontWeight.Bold, 
+            fontSize = 18.sp
+        )
+        
         LazyRow(
             contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            item {
+                CategoryChip(
+                    name = "Todo",
+                    isSelected = selectedCategoryId == null,
+                    onClick = { onCategorySelect(null) }
+                )
+            }
+            
             items(categories) { category ->
-                val isSelected = selectedCategoryId == category.id
-                Surface(
-                    shape = RoundedCornerShape(20.dp),
-                    color = if (isSelected) Primary else SurfaceVariant.copy(alpha = 0.5f),
-                    border = if (isSelected) null else BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.3f)),
-                    modifier = Modifier.clickable { 
-                        onCategorySelect(if (isSelected) null else category.id) 
-                    }
-                ) {
-                    Text(
-                        text = category.name,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
-                    )
-                }
+                CategoryChip(
+                    name = category.name,
+                    isSelected = selectedCategoryId == category.id,
+                    onClick = { onCategorySelect(category.id) }
+                )
             }
         }
     }
@@ -315,7 +324,12 @@ fun PromoBanner() {
 }
 
 @Composable
-fun ProductGridItem(product: Product, modifier: Modifier = Modifier, onClick: () -> Unit) {
+fun ProductGridItem(
+    product: Product, 
+    modifier: Modifier = Modifier, 
+    onClick: () -> Unit,
+    onAddToCart: () -> Unit
+) {
     Card(
         modifier = modifier.clickable { onClick() },
         shape = RoundedCornerShape(16.dp),
@@ -371,21 +385,25 @@ fun ProductGridItem(product: Product, modifier: Modifier = Modifier, onClick: ()
                         color = Primary,
                         fontWeight = FontWeight.Bold
                     )
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = FontAwesomeIcons.Solid.Star,
-                            contentDescription = null,
-                            modifier = Modifier.size(12.dp),
-                            tint = Color(0xFFFFB800)
-                        )
-                        Text(
-                            " 4.5",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold
-                        )
+                    
+                    Surface(
+                        onClick = onAddToCart,
+                        shape = CircleShape,
+                        color = Primary,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = FontAwesomeIcons.Solid.ShoppingCart,
+                                contentDescription = "Añadir al carrito",
+                                modifier = Modifier.size(16.dp),
+                                tint = Color.White
+                            )
+                        }
                     }
                 }
             }
         }
     }
 }
+
