@@ -1,6 +1,5 @@
 package com.market.paresolvershop.ui.checkout
 
-import androidx.compose.animation.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -26,6 +25,7 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import coil3.compose.AsyncImage
 import com.market.paresolvershop.domain.model.CartItem
 import com.market.paresolvershop.domain.model.UserAddress
+import com.market.paresolvershop.ui.components.ScrollIndicator
 import com.market.paresolvershop.ui.theme.*
 import compose.icons.FontAwesomeIcons
 import compose.icons.fontawesomeicons.Solid
@@ -50,7 +50,6 @@ data class CheckoutPaymentScreen(
         val total = subtotal + 13.0
 
         val listState = rememberLazyListState()
-        // Indicador de si hay más items abajo
         val showScrollIndicator by remember { derivedStateOf { listState.canScrollForward } }
 
         LaunchedEffect(state) {
@@ -62,7 +61,7 @@ data class CheckoutPaymentScreen(
         Scaffold(
             topBar = {
                 CenterAlignedTopAppBar(
-                    title = { Text("Order Summary", fontFamily = SpaceGrotesk, fontWeight = FontWeight.Bold) },
+                    title = { Text("Order Summary", style = Typography.headlineMedium, fontFamily = SpaceGrotesk) },
                     navigationIcon = {
                         IconButton(
                             onClick = { navigator.pop() },
@@ -78,7 +77,7 @@ data class CheckoutPaymentScreen(
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shadowElevation = 16.dp,
-                    color = Color.White,
+                    color = Surface,
                     shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
                 ) {
                     Column(
@@ -86,13 +85,12 @@ data class CheckoutPaymentScreen(
                             .padding(horizontal = 24.dp, vertical = 20.dp)
                             .navigationBarsPadding()
                     ) {
-                        // Resumen de Costos Fijo en BottomBar
                         CostSummaryRow("Order Subtotal", "$$subtotal")
                         CostSummaryRow("Shipping & Fees", "$13.00")
                         HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = SoftGray)
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Text("Total Amount", fontFamily = Inter, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                            Text("$$total", fontFamily = SpaceGrotesk, fontWeight = FontWeight.Bold, fontSize = 22.sp, color = Primary)
+                            Text("Total Amount", style = Typography.titleLarge, fontFamily = Inter)
+                            Text("$$total", style = Typography.headlineMedium, fontFamily = SpaceGrotesk, color = Primary)
                         }
 
                         Spacer(Modifier.height(16.dp))
@@ -100,23 +98,23 @@ data class CheckoutPaymentScreen(
                         if (state is CheckoutPaymentUiState.Error) {
                             Text(
                                 (state as CheckoutPaymentUiState.Error).message, 
-                                color = MaterialTheme.colorScheme.error,
+                                color = Error,
                                 modifier = Modifier.padding(bottom = 12.dp),
-                                style = MaterialTheme.typography.bodySmall
+                                style = Typography.bodySmall
                             )
                         }
 
                         Button(
                             onClick = { viewModel.placeOrder(selectedAddress, cartItems, paymentMethod) },
                             modifier = Modifier.fillMaxWidth().height(56.dp),
-                            shape = RoundedCornerShape(16.dp),
+                            shape = MaterialTheme.shapes.medium,
                             colors = ButtonDefaults.buttonColors(containerColor = OnSurface),
                             enabled = state !is CheckoutPaymentUiState.Loading
                         ) {
                             if (state is CheckoutPaymentUiState.Loading) {
                                 CircularProgressIndicator(modifier = Modifier.size(24.dp), color = SurfaceVariant, strokeWidth = 2.dp)
                             } else {
-                                Text("Place Order", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                Text("Place Order", style = Typography.bodyLarge, fontWeight = FontWeight.Bold, color = Color.White)
                             }
                         }
                     }
@@ -129,24 +127,49 @@ data class CheckoutPaymentScreen(
                     .padding(paddingValues)
                     .padding(horizontal = 20.dp)
             ) {
-                // SECCIÓN FIJA SUPERIOR: Dirección
-                Text("Deliver to", fontFamily = SpaceGrotesk, fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.padding(top = 16.dp))
+                Text("Deliver to", style = Typography.bodyLarge, fontFamily = SpaceGrotesk, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 16.dp))
                 Surface(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
-                    shape = RoundedCornerShape(16.dp),
+                    shape = MaterialTheme.shapes.medium,
                     color = SurfaceVariant.copy(alpha = 0.3f)
                 ) {
                     Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(FontAwesomeIcons.Solid.MapMarkerAlt, null, tint = Primary, modifier = Modifier.size(20.dp))
                         Column(modifier = Modifier.padding(start = 12.dp)) {
-                            Text("${selectedAddress.firstName} ${selectedAddress.lastName}", fontWeight = FontWeight.Bold)
-                            Text(selectedAddress.addressLine, style = MaterialTheme.typography.bodySmall, color = OnSurfaceVariant)
+                            Text("${selectedAddress.firstName} ${selectedAddress.lastName}", style = Typography.bodyLarge, fontWeight = FontWeight.Bold)
+                            Text(selectedAddress.addressLine, style = Typography.bodySmall, color = OnSurfaceVariant)
                         }
                     }
                 }
 
-                // SECCIÓN FIJA SUPERIOR: Pago
-                Text("Payment Method", fontFamily = SpaceGrotesk, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Spacer(Modifier.height(8.dp))
+
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Text("Order Items", style = MaterialTheme.typography.bodyLarge, fontFamily = SpaceGrotesk, fontWeight = FontWeight.Bold)
+                    Text("${cartItems.size} items", style = Typography.labelLarge, color = OnSurfaceVariant)
+                }
+
+                Box(modifier = Modifier.weight(1f).padding(top = 12.dp)) {
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        contentPadding = PaddingValues(bottom = 16.dp)
+                    ) {
+                        items(cartItems) { item ->
+                            CheckoutItemRow(item)
+                        }
+                    }
+
+                    // USO DEL COMPONENTE REUTILIZABLE CENTRALIZADO
+                    ScrollIndicator(
+                        visible = showScrollIndicator,
+                        text = "More products",
+                        modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 8.dp)
+                    )
+                }
+
+                Text("Payment Method", style = Typography.bodyLarge, fontFamily = SpaceGrotesk, fontWeight = FontWeight.Bold)
                 Row(modifier = Modifier.padding(vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     LocalPaymentMethodCard(
                         title = "Cash",
@@ -163,50 +186,6 @@ data class CheckoutPaymentScreen(
                         onClick = { paymentMethod = "Bank" }
                     )
                 }
-
-                Spacer(Modifier.height(8.dp))
-
-                // SECCIÓN DESPLAZABLE: Items
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text("Order Items", fontFamily = SpaceGrotesk, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                    Text("${cartItems.size} items", style = MaterialTheme.typography.labelMedium, color = Color.Gray)
-                }
-
-                Box(modifier = Modifier.weight(1f).padding(top = 12.dp)) {
-                    LazyColumn(
-                        state = listState,
-                        modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                        contentPadding = PaddingValues(bottom = 16.dp)
-                    ) {
-                        items(cartItems) { item ->
-                            CheckoutItemRow(item)
-                        }
-                    }
-
-                    // INDICADOR DE SCROLL: "More items"
-                    AnimatedVisibility(
-                        visible = showScrollIndicator,
-                        enter = fadeIn() + expandVertically(),
-                        exit = fadeOut() + shrinkVertically(),
-                        modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 8.dp)
-                    ) {
-                        Surface(
-                            color = Primary.copy(alpha = 0.9f),
-                            shape = CircleShape,
-                            shadowElevation = 4.dp
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(FontAwesomeIcons.Solid.ChevronDown, null, tint = Color.White, modifier = Modifier.size(14.dp))
-                                Spacer(Modifier.width(6.dp))
-                                Text("More products", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                            }
-                        }
-                    }
-                }
             }
         }
     }
@@ -220,7 +199,7 @@ fun CheckoutItemRow(item: CartItem) {
     ) {
         Surface(
             modifier = Modifier.size(54.dp),
-            shape = RoundedCornerShape(12.dp),
+            shape = MaterialTheme.shapes.small,
             color = SurfaceVariant.copy(alpha = 0.3f)
         ) {
             AsyncImage(
@@ -231,14 +210,14 @@ fun CheckoutItemRow(item: CartItem) {
             )
         }
         Column(modifier = Modifier.padding(start = 12.dp).weight(1f)) {
-            Text(item.product.name, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1)
+            Text(item.product.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, maxLines = 1)
             Text("Qty: ${item.quantity}", style = MaterialTheme.typography.bodySmall, color = OnSurfaceVariant)
         }
         Text(
             "$${item.product.price}",
+            style = MaterialTheme.typography.bodyLarge,
             fontFamily = SpaceGrotesk,
             fontWeight = FontWeight.Bold,
-            fontSize = 15.sp,
             color = Primary
         )
     }
@@ -254,8 +233,8 @@ fun LocalPaymentMethodCard(
 ) {
     Surface(
         modifier = modifier.height(56.dp).clickable { onClick() },
-        shape = RoundedCornerShape(12.dp),
-        color = if (isSelected) Primary.copy(alpha = 0.1f) else Color.White,
+        shape = MaterialTheme.shapes.small,
+        color = if (isSelected) Primary.copy(alpha = 0.1f) else Surface,
         border = BorderStroke(1.dp, if (isSelected) Primary else SoftGray)
     ) {
         Row(
@@ -265,7 +244,7 @@ fun LocalPaymentMethodCard(
         ) {
             Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp), tint = if (isSelected) Primary else OnSurface)
             Spacer(Modifier.width(8.dp))
-            Text(title, fontFamily = Inter, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = if (isSelected) Primary else OnSurface)
+            Text(title, style = MaterialTheme.typography.bodyMedium, fontFamily = Inter, fontWeight = FontWeight.Bold, color = if (isSelected) Primary else OnSurface)
         }
     }
 }
@@ -276,7 +255,7 @@ fun CostSummaryRow(label: String, value: String) {
         modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(label, color = OnSurfaceVariant, fontSize = 13.sp)
-        Text(value, fontFamily = Inter, fontWeight = FontWeight.Medium, fontSize = 13.sp)
+        Text(label, style = MaterialTheme.typography.bodyMedium, color = OnSurfaceVariant)
+        Text(value, style = MaterialTheme.typography.bodyMedium, fontFamily = Inter, fontWeight = FontWeight.Medium)
     }
 }

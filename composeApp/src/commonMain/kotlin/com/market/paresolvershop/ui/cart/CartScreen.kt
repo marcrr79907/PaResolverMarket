@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,6 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
@@ -35,6 +37,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -52,6 +55,8 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import coil3.compose.AsyncImage
 import com.market.paresolvershop.domain.model.CartItem
+import com.market.paresolvershop.ui.checkout.CheckoutItemRow
+import com.market.paresolvershop.ui.components.ScrollIndicator
 import com.market.paresolvershop.ui.theme.Inter
 import com.market.paresolvershop.ui.theme.OnSurface
 import com.market.paresolvershop.ui.theme.OnSurfaceVariant
@@ -76,6 +81,9 @@ fun CartScreen(cartViewModel: CartViewModel, onCheckout: () -> Unit) {
     val uiState by cartViewModel.uiState.collectAsState()
     val navigator = LocalNavigator.currentOrThrow
     val snackbarHostState = remember { SnackbarHostState() }
+
+    val listState = rememberLazyListState()
+    val showScrollIndicator by remember { derivedStateOf { listState.canScrollForward } }
 
     LaunchedEffect(Unit) {
         cartViewModel.eventFlow.collectLatest { event ->
@@ -114,16 +122,31 @@ fun CartScreen(cartViewModel: CartViewModel, onCheckout: () -> Unit) {
                     .padding(paddingValues)
                     .padding(horizontal = 20.dp)
             ) {
-                LazyColumn(modifier = Modifier.weight(1f)) {
-                    items(uiState.items) { item ->
-                        CartListItem(
-                            item = item,
-                            onQuantityChange = { newQuantity ->
-                                cartViewModel.updateQuantity(item.product.id, newQuantity)
-                            }
-                        )
-                        Spacer(Modifier.height(16.dp))
+                Box(
+                    modifier = Modifier.weight(1f).padding(top = 12.dp)
+                ) {
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        contentPadding = PaddingValues(bottom = 16.dp)
+                    ) {
+                        items(uiState.items) { item ->
+                            CartListItem(
+                                item = item,
+                                onQuantityChange = { newQuantity ->
+                                    cartViewModel.updateQuantity(item.product.id, newQuantity)
+                                }
+                            )
+                            Spacer(Modifier.height(16.dp))
+                        }
                     }
+                    ScrollIndicator(
+                        visible = showScrollIndicator,
+                        text = "More products",
+                        modifier = Modifier.align(Alignment.BottomCenter)
+                            .padding(bottom = 8.dp)
+                    )
                 }
 
                 // Resumen de costos
