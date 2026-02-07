@@ -30,7 +30,10 @@ data class Order(
     @SerialName("recipient_phone")
     val recipientPhone: String? = null,
     @SerialName("recipient_city")
-    val recipientCity: String? = null
+    val recipientCity: String? = null,
+
+    // Campo del Join con users (para Admin)
+    val customerName: String? = null
 ) {
     val fullRecipientName: String
         get() = if (recipientFirstName != null) "$recipientFirstName $recipientLastName" else "N/A"

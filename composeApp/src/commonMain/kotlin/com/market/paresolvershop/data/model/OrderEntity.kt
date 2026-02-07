@@ -14,7 +14,10 @@ data class OrderEntity(
     @SerialName("status") val status: String = "pending",
     @SerialName("payment_method") val paymentMethod: String,
     @SerialName("created_at") val createdAt: String? = null,
-    @SerialName("user_addresses") val address: AddressJoinEntity? = null
+    
+    // Cambiamos de List a Objeto simple (Supabase devuelve {} tras detectar FK correcta)
+    @SerialName("user_addresses") val address: AddressJoinEntity? = null,
+    @SerialName("users") val user: UserJoinEntity? = null
 )
 
 @Serializable
@@ -27,6 +30,11 @@ data class AddressJoinEntity(
 )
 
 @Serializable
+data class UserJoinEntity(
+    @SerialName("name") val name: String
+)
+
+@Serializable
 data class OrderItemEntity(
     @SerialName("id") val id: String? = null,
     @SerialName("order_id") val orderId: String,
@@ -35,7 +43,7 @@ data class OrderItemEntity(
     @SerialName("price_at_purchase") val priceAtPurchase: Double
 )
 
-// Mapeadores
+// Mapeadores actualizados para objetos simples
 fun OrderEntity.toDomain(): Order = Order(
     id = id,
     userId = userId,
@@ -48,7 +56,8 @@ fun OrderEntity.toDomain(): Order = Order(
     recipientLastName = address?.lastName,
     recipientAddress = address?.addressLine,
     recipientPhone = address?.phone,
-    recipientCity = address?.city
+    recipientCity = address?.city,
+    customerName = user?.name
 )
 
 fun Order.toEntity(): OrderEntity = OrderEntity(

@@ -12,4 +12,8 @@ interface OrderRepository {
     suspend fun fetchOrders(): DataResult<Unit>
     suspend fun getOrderItems(orderId: String): DataResult<List<Pair<OrderItem, Product>>>
     suspend fun getOrderById(orderId: String): DataResult<Order>
+    
+    // Métodos para Admin
+    suspend fun fetchAllOrdersAdmin(): DataResult<List<Order>>
+    suspend fun updateOrderStatus(orderId: String, newStatus: String): DataResult<Unit>
 }

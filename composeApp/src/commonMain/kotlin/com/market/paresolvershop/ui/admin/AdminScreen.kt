@@ -61,6 +61,10 @@ object AdminScreen : Screen {
                 Button(onClick = { navigator.push(CategoryManagementScreen) }, modifier = Modifier.fillMaxWidth()) {
                     Text("Gestionar Categorías")
                 }
+
+                Button(onClick = { navigator.push(OrderManagementScreen) }, modifier = Modifier.fillMaxWidth()) {
+                    Text("Gestionar Órdenes")
+                }
             }
         }
     }

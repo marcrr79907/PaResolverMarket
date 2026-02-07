@@ -2,6 +2,7 @@ package com.market.paresolvershop.di
 
 import com.market.paresolvershop.data.repository.OrderRepository
 import com.market.paresolvershop.data.repository.implementations.OrderRepositoryImpl
+import com.market.paresolvershop.ui.admin.OrderManagementViewModel
 import com.market.paresolvershop.ui.orders.OrderDetailViewModel
 import com.market.paresolvershop.ui.orders.OrderHistoryViewModel
 import org.koin.core.module.dsl.bind
@@ -14,4 +15,5 @@ val orderModule = module {
 
     viewModelOf(::OrderHistoryViewModel)
     viewModelOf(::OrderDetailViewModel)
+    viewModelOf(::OrderManagementViewModel)
 }

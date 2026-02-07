@@ -34,7 +34,6 @@ class OrderRepositoryImpl(
     override val orders: StateFlow<List<Order>> = _orders.asStateFlow()
 
     init {
-        // Observamos el estado de auth para reaccionar automáticamente
         repositoryScope.launch {
             authRepository.authState.collect { user ->
                 if (user != null) {
@@ -70,10 +69,9 @@ class OrderRepositoryImpl(
             val user = supabase.auth.currentUserOrNull() ?:
             return@withContext DataResult.Error("Inicia sesión")
             
+            // Eliminamos users(name) de aquí porque el usuario no necesita ver su propio nombre en cada card
             val result = supabase.from("orders").select(
-                columns = Columns.raw(
-                    "*, user_addresses(*)"
-                )
+                columns = Columns.raw("*, user_addresses(*)")
             ) {
                 filter { eq("user_id", user.id) }
                 order("created_at", SupabaseOrderDirection.DESCENDING)
@@ -83,6 +81,33 @@ class OrderRepositoryImpl(
             DataResult.Success(Unit)
         } catch (e: Exception) {
             DataResult.Error(e.message ?: "Error al obtener pedidos")
+        }
+    }
+
+    override suspend fun fetchAllOrdersAdmin(): DataResult<List<Order>> = withContext(Dispatchers.Default) {
+        try {
+            // El admin sí necesita el join con users(name)
+            val result = supabase.from("orders").select(
+                columns = Columns.raw("*, user_addresses(*), users(name)")
+            ) {
+                order("created_at", SupabaseOrderDirection.DESCENDING)
+            }.decodeList<OrderEntity>()
+            
+            DataResult.Success(result.map { it.toDomain() })
+        } catch (e: Exception) {
+            DataResult.Error(e.message ?: "Error al cargar todas las órdenes")
+        }
+    }
+
+    override suspend fun updateOrderStatus(orderId: String, newStatus: String): DataResult<Unit> = withContext(Dispatchers.Default) {
+        try {
+            supabase.from("orders").update(mapOf("status" to newStatus)) {
+                filter { eq("id", orderId) }
+            }
+            fetchOrders() 
+            DataResult.Success(Unit)
+        } catch (e: Exception) {
+            DataResult.Error(e.message ?: "Error al actualizar estado")
         }
     }
 
@@ -117,7 +142,7 @@ class OrderRepositoryImpl(
     override suspend fun getOrderById(orderId: String): DataResult<Order> = withContext(Dispatchers.Default) {
         try {
             val entity = supabase.from("orders").select(
-                columns = Columns.raw("*, user_addresses(first_name, last_name, address_line, phone, city)")
+                columns = Columns.raw("*, user_addresses(*), users(name)")
             ) {
                 filter { eq("id", orderId) }
             }.decodeSingle<OrderEntity>()

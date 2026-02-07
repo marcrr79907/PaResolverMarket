@@ -10,9 +10,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -23,15 +21,20 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import cafe.adriel.voyager.navigator.tab.LocalTabNavigator
-import coil3.compose.AsyncImage
 import com.market.paresolvershop.domain.model.OrderItem
 import com.market.paresolvershop.domain.model.Product
 import com.market.paresolvershop.ui.navigation.bottombar.CartTab
+import com.market.paresolvershop.ui.orders.components.OrderProductItemRow
+import com.market.paresolvershop.ui.orders.components.StatusBadge
 import com.market.paresolvershop.ui.profile.AddressManagementScreen
+import com.market.paresolvershop.ui.profile.ProfileUiState
+import com.market.paresolvershop.ui.profile.ProfileViewModel
 import com.market.paresolvershop.ui.theme.*
 import compose.icons.FontAwesomeIcons
 import compose.icons.fontawesomeicons.Solid
-import compose.icons.fontawesomeicons.solid.*
+import compose.icons.fontawesomeicons.solid.ArrowLeft
+import compose.icons.fontawesomeicons.solid.MapMarkerAlt
+import compose.icons.fontawesomeicons.solid.UserCircle
 import kotlinx.coroutines.flow.collectLatest
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.annotation.KoinExperimentalAPI
@@ -45,7 +48,11 @@ data class OrderDetailScreen(val orderId: String) : Screen {
         val navigator = LocalNavigator.currentOrThrow
         val tabNavigator = LocalTabNavigator.current
         val viewModel = koinViewModel<OrderDetailViewModel> { parametersOf(orderId) }
+        val profileViewModel = koinViewModel<ProfileViewModel>()
+        
         val uiState by viewModel.uiState.collectAsState()
+        val profileState by profileViewModel.uiState.collectAsState()
+        val isAdmin = (profileState as? ProfileUiState.Authenticated)?.isAdmin ?: false
         
         val snackbarHostState = remember { SnackbarHostState() }
 
@@ -93,6 +100,7 @@ data class OrderDetailScreen(val orderId: String) : Screen {
                             orderId = orderId,
                             items = state.items,
                             order = state.order,
+                            isAdmin = isAdmin,
                             onAddAddressClick = { navigator.push(AddressManagementScreen()) },
                             onReOrderClick = { viewModel.reOrder(state.items) }
                         )
@@ -108,6 +116,7 @@ fun OrderDetailContent(
     orderId: String, 
     items: List<Pair<OrderItem, Product>>,
     order: com.market.paresolvershop.domain.model.Order,
+    isAdmin: Boolean,
     onAddAddressClick: () -> Unit,
     onReOrderClick: () -> Unit
 ) {
@@ -119,31 +128,52 @@ fun OrderDetailContent(
             contentPadding = PaddingValues(20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // 1. Header Information
+            // Header con Status
             item {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text("Order Information", fontFamily = SpaceGrotesk, fontWeight = FontWeight.Bold, fontSize = 24.sp)
-                    
-                    Text(text = buildAnnotatedString {
-                        withStyle(style = SpanStyle(color = Primary, fontWeight = FontWeight.Bold)) {
-                            append("ID: ")
-                        }
-                        append(orderId.take(8))
-                    }, fontSize = 12.sp)
+                    Column {
+                        Text("Order Information", fontFamily = SpaceGrotesk, fontWeight = FontWeight.Bold, fontSize = 24.sp)
+                        Text(text = buildAnnotatedString {
+                            withStyle(style = SpanStyle(color = Primary, fontWeight = FontWeight.Bold)) {
+                                append("ID: ")
+                            }
+                            append(orderId.take(8))
+                        }, fontSize = 12.sp)
+                    }
+                    StatusBadge(status = order.status)
                 }
             }
 
-            // 2. Delivery Address Card
+            // Customer Info (Solo Admin)
+            if (isAdmin && order.customerName != null) {
+                item {
+                    Text("Customer Info", style = MaterialTheme.typography.labelLarge, color = OnSurfaceVariant)
+                    Surface(
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        color = Color.White,
+                        shadowElevation = 2.dp
+                    ) {
+                        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(FontAwesomeIcons.Solid.UserCircle, null, tint = Primary, modifier = Modifier.size(20.dp))
+                            Text(order.customerName, modifier = Modifier.padding(start = 12.dp), fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+
+            // Delivery Address Card
             item {
-                Spacer(Modifier.height(24.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(), 
                     horizontalArrangement = Arrangement.SpaceBetween, 
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text("Delivery to", style = MaterialTheme.typography.labelLarge, color = OnSurfaceVariant)
-                    TextButton(onClick = onAddAddressClick, contentPadding = PaddingValues(0.dp)) {
-                        Text("Add new address", color = Primary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    if (!isAdmin) {
+                        TextButton(onClick = onAddAddressClick, contentPadding = PaddingValues(0.dp)) {
+                            Text("Add new address", color = Primary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
                 Surface(
@@ -163,7 +193,7 @@ fun OrderDetailContent(
                 }
             }
 
-            // 3. Delivery Time
+            // Delivery Time
             item {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text("Order Date", style = MaterialTheme.typography.labelLarge, color = OnSurfaceVariant)
@@ -171,12 +201,16 @@ fun OrderDetailContent(
                 }
             }
 
-            // 4. Items List
             items(items) { (orderItem, product) ->
-                OrderDetailItemRow(orderItem, product)
+                OrderProductItemRow(
+                    name = product.name,
+                    imageUrl = product.imageUrl,
+                    category = product.category,
+                    quantity = orderItem.quantity,
+                    price = orderItem.priceAtPurchase
+                )
             }
 
-            // 5. Cost Summary
             item {
                 Column(modifier = Modifier.padding(vertical = 12.dp)) {
                     DetailRow("Subtotal (${items.size} items)", "$$subtotal")
@@ -189,7 +223,7 @@ fun OrderDetailContent(
                 }
             }
 
-            // 6. Note Section
+            // Note Section
             item {
                 Text("Note", style = MaterialTheme.typography.labelLarge, color = OnSurfaceVariant)
                 Surface(
@@ -207,41 +241,23 @@ fun OrderDetailContent(
             }
         }
 
-        // 7. Re-Order Button
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shadowElevation = 8.dp,
-            color = Color.White
-        ) {
-            Button(
-                onClick = onReOrderClick,
-                modifier = Modifier.fillMaxWidth().padding(20.dp).height(56.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Primary)
+        // El botón Re-Order no es necesario para el admin en la gestión de otros
+        if (!isAdmin) {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shadowElevation = 8.dp,
+                color = Color.White
             ) {
-                Text("Re-Order", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Button(
+                    onClick = onReOrderClick,
+                    modifier = Modifier.fillMaxWidth().padding(20.dp).height(56.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Primary)
+                ) {
+                    Text("Re-Order", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                }
             }
         }
-    }
-}
-
-@Composable
-fun OrderDetailItemRow(orderItem: OrderItem, product: Product) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), 
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        AsyncImage(
-            model = product.imageUrl,
-            contentDescription = null,
-            modifier = Modifier.size(60.dp).clip(RoundedCornerShape(12.dp)).background(SurfaceVariant),
-            contentScale = ContentScale.Crop
-        )
-        Column(modifier = Modifier.padding(start = 16.dp).weight(1f)) {
-            Text(product.name, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-            Text(product.category, fontSize = 12.sp, color = OnSurfaceVariant)
-        }
-        Text("x${orderItem.quantity}", fontSize = 14.sp, fontWeight = FontWeight.Bold)
     }
 }
 
