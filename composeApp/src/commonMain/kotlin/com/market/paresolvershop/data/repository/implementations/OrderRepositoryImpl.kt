@@ -113,27 +113,24 @@ class OrderRepositoryImpl(
 
     override suspend fun getOrderItems(orderId: String): DataResult<List<Pair<OrderItem, Product>>> = withContext(Dispatchers.Default) {
         try {
-            val items = supabase.from("order_items").select {
-                filter { eq("order_id", orderId) }
-            }.decodeList<OrderItemEntity>()
             val entities = supabase.from("order_items")
                 .select(columns = Columns.raw("*, products(*)")) {
                     filter { eq("order_id", orderId) }
                 }.decodeList<OrderItemEntity>()
 
-            val result = items.mapNotNull { entity ->
+            val result = entities.mapNotNull { entity ->
                 val product = supabase.from("products").select {
                     filter { eq("id", entity.productId) }
                 }.decodeSingleOrNull<Product>()
-                
-                product?.let { 
+
+                product?.let {
                     OrderItem(
                         id = entity.id,
                         orderId = entity.orderId,
                         productId = entity.productId,
                         quantity = entity.quantity,
                         priceAtPurchase = entity.priceAtPurchase
-                    ) to it 
+                    ) to it
                 }
             }
 
