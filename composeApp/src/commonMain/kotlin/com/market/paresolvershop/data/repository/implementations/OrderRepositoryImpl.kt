@@ -116,6 +116,10 @@ class OrderRepositoryImpl(
             val items = supabase.from("order_items").select {
                 filter { eq("order_id", orderId) }
             }.decodeList<OrderItemEntity>()
+            val entities = supabase.from("order_items")
+                .select(columns = Columns.raw("*, products(*)")) {
+                    filter { eq("order_id", orderId) }
+                }.decodeList<OrderItemEntity>()
 
             val result = items.mapNotNull { entity ->
                 val product = supabase.from("products").select {
