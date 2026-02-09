@@ -15,7 +15,7 @@ data class OrderEntity(
     @SerialName("payment_method") val paymentMethod: String,
     @SerialName("created_at") val createdAt: String? = null,
     
-    // Cambiamos de List a Objeto simple (Supabase devuelve {} tras detectar FK correcta)
+    // Joins con objetos simples (Supabase devuelve {} tras detectar FK correcta)
     @SerialName("user_addresses") val address: AddressJoinEntity? = null,
     @SerialName("users") val user: UserJoinEntity? = null
 )
@@ -40,10 +40,12 @@ data class OrderItemEntity(
     @SerialName("order_id") val orderId: String,
     @SerialName("product_id") val productId: String,
     @SerialName("quantity") val quantity: Int,
-    @SerialName("price_at_purchase") val priceAtPurchase: Double
+    @SerialName("price_at_purchase") val priceAtPurchase: Double,
+    // Join opcional con la tabla de productos para optimizar consultas
+    @SerialName("products") val product: ProductEntity? = null
 )
 
-// Mapeadores actualizados para objetos simples
+// Mapeadores
 fun OrderEntity.toDomain(): Order = Order(
     id = id,
     userId = userId,
@@ -68,6 +70,14 @@ fun Order.toEntity(): OrderEntity = OrderEntity(
     status = status,
     paymentMethod = paymentMethod,
     createdAt = createdAt
+)
+
+fun OrderItemEntity.toDomain(): OrderItem = OrderItem(
+    id = id,
+    orderId = orderId,
+    productId = productId,
+    quantity = quantity,
+    priceAtPurchase = priceAtPurchase
 )
 
 fun OrderItem.toEntity(): OrderItemEntity = OrderItemEntity(

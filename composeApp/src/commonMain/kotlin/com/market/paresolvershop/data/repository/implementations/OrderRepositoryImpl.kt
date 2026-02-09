@@ -69,7 +69,6 @@ class OrderRepositoryImpl(
             val user = supabase.auth.currentUserOrNull() ?:
             return@withContext DataResult.Error("Inicia sesión")
             
-            // Eliminamos users(name) de aquí porque el usuario no necesita ver su propio nombre en cada card
             val result = supabase.from("orders").select(
                 columns = Columns.raw("*, user_addresses(*)")
             ) {
@@ -86,7 +85,7 @@ class OrderRepositoryImpl(
 
     override suspend fun fetchAllOrdersAdmin(): DataResult<List<Order>> = withContext(Dispatchers.Default) {
         try {
-            // El admin sí necesita el join con users(name)
+            // Join con user_addresses Y con users para obtener el nombre del cliente
             val result = supabase.from("orders").select(
                 columns = Columns.raw("*, user_addresses(*), users(name)")
             ) {
@@ -104,7 +103,7 @@ class OrderRepositoryImpl(
             supabase.from("orders").update(mapOf("status" to newStatus)) {
                 filter { eq("id", orderId) }
             }
-            fetchOrders() 
+            // No llamamos a fetchOrders() aquí porque el admin gestiona órdenes de terceros
             DataResult.Success(Unit)
         } catch (e: Exception) {
             DataResult.Error(e.message ?: "Error al actualizar estado")
@@ -113,24 +112,17 @@ class OrderRepositoryImpl(
 
     override suspend fun getOrderItems(orderId: String): DataResult<List<Pair<OrderItem, Product>>> = withContext(Dispatchers.Default) {
         try {
-            val items = supabase.from("order_items").select {
-                filter { eq("order_id", orderId) }
-            }.decodeList<OrderItemEntity>()
+            // OPTIMIZACIÓN: Usamos Join para traer el producto en una sola consulta
+            val entities = supabase.from("order_items")
+                .select(columns = Columns.raw("*, products(*)")) {
+                    filter { eq("order_id", orderId) }
+                }.decodeList<OrderItemEntity>()
 
-            val result = items.mapNotNull { entity ->
-                val product = supabase.from("products").select {
-                    filter { eq("id", entity.productId) }
-                }.decodeSingleOrNull<Product>()
-                
-                product?.let { 
-                    OrderItem(
-                        id = entity.id,
-                        orderId = entity.orderId,
-                        productId = entity.productId,
-                        quantity = entity.quantity,
-                        priceAtPurchase = entity.priceAtPurchase
-                    ) to it 
-                }
+            val result = entities.mapNotNull { entity ->
+                val domainProduct = entity.product?.toDomain()
+                if (domainProduct != null) {
+                    entity.toDomain() to domainProduct
+                } else null
             }
 
             DataResult.Success(result)

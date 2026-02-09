@@ -10,6 +10,8 @@ interface AuthRepository {
 
     fun getCurrentUser(): AuthUserEntity?
 
+    suspend fun getAllUsers(): DataResult<List<AuthUserEntity>>
+
     suspend fun signInWithEmailAndPassword(email: String, password: String): DataResult<AuthUserEntity>
 
     // Añadida la nueva función para el login con Google
