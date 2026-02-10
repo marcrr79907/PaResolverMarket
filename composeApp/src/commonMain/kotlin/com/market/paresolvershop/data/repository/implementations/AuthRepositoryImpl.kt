@@ -143,8 +143,6 @@ class AuthRepositoryImpl(
                 }
             }
 
-            // Si la confirmación de email está activa, el currentUser será null o no tendrá sesión.
-            // Manejamos eso devolviendo un éxito pero informando al usuario.
             val user = supabase.auth.currentUserOrNull()
             if (user == null || user.identities.isNullOrEmpty()) {
                 return DataResult.Success(AuthUserEntity("", email, name, "customer"))

@@ -2,6 +2,7 @@ package com.market.paresolvershop.data.model
 
 import com.market.paresolvershop.domain.model.Order
 import com.market.paresolvershop.domain.model.OrderItem
+import com.market.paresolvershop.domain.model.Product
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -15,7 +16,6 @@ data class OrderEntity(
     @SerialName("payment_method") val paymentMethod: String,
     @SerialName("created_at") val createdAt: String? = null,
     
-    // Cambiamos de List a Objeto simple (Supabase devuelve {} tras detectar FK correcta)
     @SerialName("user_addresses") val address: AddressJoinEntity? = null,
     @SerialName("users") val user: UserJoinEntity? = null
 )
@@ -43,7 +43,17 @@ data class OrderItemEntity(
     @SerialName("price_at_purchase") val priceAtPurchase: Double
 )
 
-// Mapeadores actualizados para objetos simples
+@Serializable
+data class OrderItemWithProductEntity(
+    @SerialName("id") val id: String? = null,
+    @SerialName("order_id") val orderId: String,
+    @SerialName("product_id") val productId: String,
+    @SerialName("quantity") val quantity: Int,
+    @SerialName("price_at_purchase") val priceAtPurchase: Double,
+    @SerialName("products") val product: Product
+)
+
+// Mapeadores
 fun OrderEntity.toDomain(): Order = Order(
     id = id,
     userId = userId,
@@ -77,3 +87,12 @@ fun OrderItem.toEntity(): OrderItemEntity = OrderItemEntity(
     quantity = quantity,
     priceAtPurchase = priceAtPurchase
 )
+
+fun OrderItemWithProductEntity.toDomainPair(): Pair<OrderItem, Product> = 
+    OrderItem(
+        id = id,
+        orderId = orderId,
+        productId = productId,
+        quantity = quantity,
+        priceAtPurchase = priceAtPurchase
+    ) to product

@@ -17,7 +17,8 @@ import kotlinx.coroutines.launch
 
 data class CartUiState(
     val items: List<CartItem> = emptyList(),
-    val subtotal: Double = 0.0
+    val subtotal: Double = 0.0,
+    val isValid: Boolean = true // Indica si todos los items tienen stock suficiente
 )
 
 sealed interface CartEvent {
@@ -33,7 +34,8 @@ class CartViewModel(
     val uiState: StateFlow<CartUiState> = cartRepository.getCartItems()
         .map { items ->
             val subtotal = items.sumOf { it.product.price * it.quantity }
-            CartUiState(items = items, subtotal = subtotal)
+            val isValid = items.all { it.quantity <= it.product.stock }
+            CartUiState(items = items, subtotal = subtotal, isValid = isValid)
         }
         .stateIn(
             scope = viewModelScope,
@@ -75,12 +77,14 @@ class CartViewModel(
     fun removeFromCart(productId: String) {
         viewModelScope.launch {
             cartRepository.removeFromCart(productId)
+            _eventFlow.emit(CartEvent.Success("Producto eliminado"))
         }
     }
 
     fun clearCart() {
         viewModelScope.launch {
             cartRepository.clearCart()
+            _eventFlow.emit(CartEvent.Success("Carrito vaciado"))
         }
     }
 }
