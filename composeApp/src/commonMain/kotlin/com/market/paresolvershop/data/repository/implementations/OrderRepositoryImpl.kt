@@ -15,8 +15,6 @@ import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
-import io.github.jan.supabase.postgrest.rpc
-import io.github.jan.supabase.postgrest.query.Order as SupabaseOrderDirection
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -28,6 +26,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import io.github.jan.supabase.postgrest.query.Order as SupabaseOrderDirection
 
 class OrderRepositoryImpl(
     private val supabase: SupabaseClient,

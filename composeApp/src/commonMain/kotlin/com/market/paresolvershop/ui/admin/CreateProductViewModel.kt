@@ -6,19 +6,29 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.market.paresolvershop.domain.model.DataResult
+import com.market.paresolvershop.domain.model.ProductVariant
 import com.market.paresolvershop.domain.products.CreateProductUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-// Estado para los campos del formulario
+// Estado ampliado para e-commerce profesional
 data class CreateProductFormState(
     val name: String = "",
     val description: String = "",
     val price: String = "",
     val stock: String = "",
     val categoryId: String = "",
-    val imageBytes: ByteArray? = null
+    val mainImageBytes: ByteArray? = null,
+    val additionalImages: List<ByteArray> = emptyList(),
+    val variants: List<ProductVariantFormState> = emptyList()
+)
+
+data class ProductVariantFormState(
+    val name: String = "",
+    val price: String = "",
+    val stock: String = "",
+    val sku: String = ""
 )
 
 sealed interface CreateProductScreenState {
@@ -43,7 +53,35 @@ class CreateProductViewModel(
     fun onPriceChange(price: String) { formState = formState.copy(price = price) }
     fun onStockChange(stock: String) { formState = formState.copy(stock = stock) }
     fun onCategoryChange(categoryId: String) { formState = formState.copy(categoryId = categoryId) }
-    fun onImageSelected(bytes: ByteArray?) { formState = formState.copy(imageBytes = bytes) }
+    
+    // Ajustado para tomar la primera imagen de la lista
+    fun onMainImageSelected(images: List<ByteArray>?) { 
+        formState = formState.copy(mainImageBytes = images?.firstOrNull()) 
+    }
+    
+    // Ajustado para añadir múltiples imágenes de una vez
+    fun addAdditionalImages(images: List<ByteArray>) {
+        formState = formState.copy(additionalImages = formState.additionalImages + images)
+    }
+
+    fun removeAdditionalImage(index: Int) {
+        val newList = formState.additionalImages.toMutableList().apply { removeAt(index) }
+        formState = formState.copy(additionalImages = newList)
+    }
+
+    fun addVariant() {
+        formState = formState.copy(variants = formState.variants + ProductVariantFormState())
+    }
+
+    fun updateVariant(index: Int, variant: ProductVariantFormState) {
+        val newList = formState.variants.toMutableList().apply { set(index, variant) }
+        formState = formState.copy(variants = newList)
+    }
+
+    fun removeVariant(index: Int) {
+        val newList = formState.variants.toMutableList().apply { removeAt(index) }
+        formState = formState.copy(variants = newList)
+    }
 
     fun createProduct() {
         viewModelScope.launch {
@@ -51,7 +89,18 @@ class CreateProductViewModel(
 
             val priceDouble = formState.price.toDoubleOrNull() ?: 0.0
             val stockInt = formState.stock.toIntOrNull() ?: 0
-            val imageBytesToSend = formState.imageBytes ?: byteArrayOf()
+            val mainImage = formState.mainImageBytes ?: byteArrayOf()
+
+            val variants = formState.variants.map { 
+                ProductVariant(
+                    id = "",
+                    productId = "",
+                    name = it.name,
+                    price = it.price.toDoubleOrNull(),
+                    stock = it.stock.toIntOrNull() ?: 0,
+                    sku = it.sku
+                )
+            }
 
             val result = createProductUseCase(
                 name = formState.name,
@@ -59,7 +108,9 @@ class CreateProductViewModel(
                 price = priceDouble,
                 stock = stockInt,
                 categoryId = formState.categoryId,
-                imageBytes = imageBytesToSend
+                mainImageBytes = mainImage,
+                additionalImages = formState.additionalImages,
+                variants = variants
             )
 
             _screenState.value = when (result) {

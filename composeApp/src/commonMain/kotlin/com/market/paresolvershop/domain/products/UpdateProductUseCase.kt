@@ -11,34 +11,35 @@ class UpdateProductUseCase(
 ) {
     suspend operator fun invoke(
         product: Product,
-        newImageBytes: ByteArray? // Null if the image is not being changed
+        newMainImageBytes: ByteArray?,
+        newAdditionalImages: List<ByteArray> = emptyList()
     ): DataResult<Unit> {
         return try {
-            val oldImageUrl = product.imageUrl
-            var finalImageUrl = oldImageUrl
-            var hasNewImage = false
+            var finalMainImageUrl = product.imageUrl
+            val currentAdditionalImages = product.images.toMutableList()
 
-            // If there's a new image, upload it first
-            if (newImageBytes != null && newImageBytes.isNotEmpty()) {
-                val uploadResult = storageRepository.uploadImage(newImageBytes, product.name)
+            // 1. Actualizar imagen principal si hay una nueva
+            if (newMainImageBytes != null && newMainImageBytes.isNotEmpty()) {
+                val uploadResult = storageRepository.uploadImage(newMainImageBytes, "${product.name}-main-update")
                 if (uploadResult is DataResult.Success) {
-                    finalImageUrl = uploadResult.data
-                    hasNewImage = true
-                } else {
-                    return uploadResult as DataResult.Error
+                    finalMainImageUrl = uploadResult.data
                 }
             }
 
-            val updatedProduct = product.copy(imageUrl = finalImageUrl)
-            val dbResult = productRepository.updateProduct(updatedProduct)
-
-            if (dbResult is DataResult.Success && hasNewImage && !oldImageUrl.isNullOrEmpty()) {
-                // Delete old image for clean
-                storageRepository.deleteImage(oldImageUrl)
+            // 2. Subir nuevas imágenes adicionales
+            newAdditionalImages.forEachIndexed { index, bytes ->
+                val res = storageRepository.uploadImage(bytes, "${product.name}-extra-update-$index")
+                if (res is DataResult.Success) {
+                    currentAdditionalImages.add(res.data)
+                }
             }
 
-            dbResult
-
+            val updatedProduct = product.copy(
+                imageUrl = finalMainImageUrl,
+                images = currentAdditionalImages
+            )
+            
+            productRepository.updateProduct(updatedProduct)
         } catch (e: Exception) {
             DataResult.Error(e.message ?: "Error al actualizar producto")
         }
