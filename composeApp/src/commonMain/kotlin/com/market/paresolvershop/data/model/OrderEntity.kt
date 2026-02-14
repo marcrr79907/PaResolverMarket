@@ -35,15 +35,6 @@ data class UserJoinEntity(
 )
 
 @Serializable
-data class OrderItemEntity(
-    @SerialName("id") val id: String? = null,
-    @SerialName("order_id") val orderId: String,
-    @SerialName("product_id") val productId: String,
-    @SerialName("quantity") val quantity: Int,
-    @SerialName("price_at_purchase") val priceAtPurchase: Double
-)
-
-@Serializable
 data class OrderItemWithProductEntity(
     @SerialName("id") val id: String? = null,
     @SerialName("order_id") val orderId: String,
@@ -68,24 +59,6 @@ fun OrderEntity.toDomain(): Order = Order(
     recipientPhone = address?.phone,
     recipientCity = address?.city,
     customerName = user?.name
-)
-
-fun Order.toEntity(): OrderEntity = OrderEntity(
-    id = id,
-    userId = userId,
-    addressId = addressId,
-    totalAmount = totalAmount,
-    status = status,
-    paymentMethod = paymentMethod,
-    createdAt = createdAt
-)
-
-fun OrderItem.toEntity(): OrderItemEntity = OrderItemEntity(
-    id = id,
-    orderId = orderId,
-    productId = productId,
-    quantity = quantity,
-    priceAtPurchase = priceAtPurchase
 )
 
 fun OrderItemWithProductEntity.toDomainPair(): Pair<OrderItem, Product> = 
