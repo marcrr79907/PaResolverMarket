@@ -2,6 +2,7 @@ package com.market.paresolvershop.data.model
 
 import com.market.paresolvershop.domain.model.Order
 import com.market.paresolvershop.domain.model.OrderItem
+import com.market.paresolvershop.domain.model.Product
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -14,8 +15,7 @@ data class OrderEntity(
     @SerialName("status") val status: String = "pending",
     @SerialName("payment_method") val paymentMethod: String,
     @SerialName("created_at") val createdAt: String? = null,
-    
-    // Joins con objetos simples (Supabase devuelve {} tras detectar FK correcta)
+
     @SerialName("user_addresses") val address: AddressJoinEntity? = null,
     @SerialName("users") val user: UserJoinEntity? = null
 )
@@ -40,9 +40,17 @@ data class OrderItemEntity(
     @SerialName("order_id") val orderId: String,
     @SerialName("product_id") val productId: String,
     @SerialName("quantity") val quantity: Int,
+    @SerialName("price_at_purchase") val priceAtPurchase: Double
+)
+
+@Serializable
+data class OrderItemWithProductEntity(
+    @SerialName("id") val id: String? = null,
+    @SerialName("order_id") val orderId: String,
+    @SerialName("product_id") val productId: String,
+    @SerialName("quantity") val quantity: Int,
     @SerialName("price_at_purchase") val priceAtPurchase: Double,
-    // Join opcional con la tabla de productos para optimizar consultas
-    @SerialName("products") val product: ProductEntity? = null
+    @SerialName("products") val product: Product
 )
 
 // Mapeadores
@@ -72,14 +80,6 @@ fun Order.toEntity(): OrderEntity = OrderEntity(
     createdAt = createdAt
 )
 
-fun OrderItemEntity.toDomain(): OrderItem = OrderItem(
-    id = id,
-    orderId = orderId,
-    productId = productId,
-    quantity = quantity,
-    priceAtPurchase = priceAtPurchase
-)
-
 fun OrderItem.toEntity(): OrderItemEntity = OrderItemEntity(
     id = id,
     orderId = orderId,
@@ -87,3 +87,12 @@ fun OrderItem.toEntity(): OrderItemEntity = OrderItemEntity(
     quantity = quantity,
     priceAtPurchase = priceAtPurchase
 )
+
+fun OrderItemWithProductEntity.toDomainPair(): Pair<OrderItem, Product> =
+    OrderItem(
+        id = id,
+        orderId = orderId,
+        productId = productId,
+        quantity = quantity,
+        priceAtPurchase = priceAtPurchase
+    ) to product

@@ -7,6 +7,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -19,26 +21,26 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
-import cafe.adriel.voyager.navigator.tab.LocalTabNavigator
 import coil3.compose.AsyncImage
 import com.market.paresolvershop.domain.model.Product
+import com.market.paresolvershop.domain.model.ProductVariant
 import com.market.paresolvershop.ui.authentication.LoginScreen
 import com.market.paresolvershop.ui.authentication.RegisterScreen
 import com.market.paresolvershop.ui.cart.CartEvent
 import com.market.paresolvershop.ui.cart.CartViewModel
 import com.market.paresolvershop.ui.components.LoginPromptDialog
-import com.market.paresolvershop.ui.navigation.bottombar.ProfileTab
+import com.market.paresolvershop.ui.components.formatPrice
 import com.market.paresolvershop.ui.theme.*
 import compose.icons.FontAwesomeIcons
 import compose.icons.fontawesomeicons.Solid
 import compose.icons.fontawesomeicons.solid.ArrowLeft
 import compose.icons.fontawesomeicons.solid.Heart
-import compose.icons.fontawesomeicons.solid.ShoppingCart
 import compose.icons.fontawesomeicons.solid.Star
 import kotlinx.coroutines.flow.collectLatest
 import org.koin.compose.viewmodel.koinViewModel
@@ -51,7 +53,6 @@ data class ProductDetailScreen(val productId: String) : Screen {
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
-        val tabNavigator = LocalTabNavigator.current
         val detailViewModel = koinViewModel<ProductDetailViewModel> { parametersOf(productId) }
         val cartViewModel = koinViewModel<CartViewModel>()
         val uiState by detailViewModel.uiState.collectAsState()
@@ -70,7 +71,7 @@ data class ProductDetailScreen(val productId: String) : Screen {
 
         if (showLoginDialog) {
             LoginPromptDialog(
-                onDismiss = { showLoginDialog = false},
+                onDismiss = { showLoginDialog = false },
                 onLoginClick = {
                     showLoginDialog = false
                     navigator.push(LoginScreen)
@@ -109,26 +110,18 @@ data class ProductDetailScreen(val productId: String) : Screen {
         ) { paddingValues ->
             Box(modifier = Modifier.fillMaxSize()) {
                 when (val state = uiState) {
-                    is ProductDetailUiState.Loading -> {
-                        CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-                    }
+                    is ProductDetailUiState.Loading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                    is ProductDetailUiState.Error -> Text(state.message, color = Error, modifier = Modifier.align(Alignment.Center))
                     is ProductDetailUiState.Success -> {
                         ProductDetailContent(
                             product = state.product,
-                            onAddToCart = {
+                            onAddToCart = { finalProduct ->
                                 if (cartViewModel.isUserLoggedIn()) {
-                                    cartViewModel.addToCart(state.product)
+                                    cartViewModel.addToCart(finalProduct)
                                 } else {
                                     showLoginDialog = true
                                 }
                             }
-                        )
-                    }
-                    is ProductDetailUiState.Error -> {
-                        Text(
-                            text = state.message,
-                            color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.align(Alignment.Center)
                         )
                     }
                 }
@@ -138,194 +131,148 @@ data class ProductDetailScreen(val productId: String) : Screen {
 }
 
 @Composable
-fun ProductDetailContent(product: Product, onAddToCart: () -> Unit) {
+fun ProductDetailContent(product: Product, onAddToCart: (Product) -> Unit) {
+    val allImages = remember(product) { (listOfNotNull(product.imageUrl) + product.images).distinct() }
+    val pagerState = rememberPagerState(pageCount = { allImages.size })
     val scrollState = rememberScrollState()
     
+    // Gestión de variantes
+    var selectedVariant by remember { mutableStateOf<ProductVariant?>(product.variants.firstOrNull()) }
+    
+    // Precio y stock dinámicos
+    val currentPrice = selectedVariant?.price ?: product.price
+    val currentStock = selectedVariant?.stock ?: product.stock
+
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(scrollState)
+        modifier = Modifier.fillMaxSize().verticalScroll(scrollState)
     ) {
-        // 1. Image Section
+        // 1. Carrusel de Imágenes Profesional
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(350.dp)
-                .padding(horizontal = 20.dp)
-                .clip(RoundedCornerShape(32.dp))
-                .background(SurfaceVariant)
+            modifier = Modifier.fillMaxWidth().height(380.dp).padding(horizontal = 20.dp)
+                .clip(RoundedCornerShape(32.dp)).background(SurfaceVariant)
         ) {
-            AsyncImage(
-                model = product.imageUrl,
-                contentDescription = product.name,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Fit
-            )
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.fillMaxSize()
+            ) { page ->
+                AsyncImage(
+                    model = allImages[page],
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize().padding(16.dp),
+                    contentScale = ContentScale.Fit
+                )
+            }
+            
+            // Indicador de páginas (Dots)
+            if (allImages.size > 1) {
+                Row(
+                    Modifier.height(50.dp).fillMaxWidth().align(Alignment.BottomCenter),
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    repeat(allImages.size) { iteration ->
+                        val color = if (pagerState.currentPage == iteration) Primary else Color.LightGray
+                        Box(
+                            modifier = Modifier.padding(2.dp).clip(CircleShape).background(color).size(8.dp)
+                        )
+                    }
+                }
+            }
         }
 
         Spacer(Modifier.height(24.dp))
 
-        // 2. Thumbnails (Mocked for UI design)
-        LazyRow(
-            contentPadding = PaddingValues(horizontal = 20.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            items(List(5) { it }) { index ->
-                Box(
-                    modifier = Modifier
-                        .size(60.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(SurfaceVariant)
-                        .border(
-                            width = if (index == 2) 2.dp else 0.dp,
-                            color = if (index == 2) Primary else Color.Transparent,
-                            shape = RoundedCornerShape(12.dp)
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    AsyncImage(
-                        model = product.imageUrl,
-                        contentDescription = null,
-                        modifier = Modifier.size(45.dp),
-                        contentScale = ContentScale.Fit
-                    )
+        Column(modifier = Modifier.padding(horizontal = 24.dp)) {
+            // 2. Nombre y Precio Dinámico
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(text = product.name, fontFamily = SpaceGrotesk, fontWeight = FontWeight.Bold, fontSize = 26.sp)
+                    Text(text = product.category, color = OnSurfaceVariant, fontSize = 14.sp)
                 }
-            }
-        }
-
-        Column(modifier = Modifier.padding(24.dp)) {
-            // 3. Name and Price
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
                 Text(
-                    text = product.name,
+                    text = "$${currentPrice.formatPrice()}",
                     fontFamily = SpaceGrotesk,
                     fontWeight = FontWeight.Bold,
                     fontSize = 24.sp,
-                    modifier = Modifier.weight(1f)
-                )
-                Text(
-                    text = "$${product.price}",
-                    fontFamily = SpaceGrotesk,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 22.sp,
-                    color = OnSurface
+                    color = Primary
                 )
             }
 
-            // 4. Rating
-            Row(
-                modifier = Modifier.padding(top = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(FontAwesomeIcons.Solid.Star, contentDescription = null, tint = Color(0xFFFFB300), modifier = Modifier.size(16.dp))
-                Text(
-                    " 4.6",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(start = 4.dp)
-                )
-            }
-
-            Spacer(Modifier.height(24.dp))
-
-            // 5. Select Model
-            Text(
-                "Seleccione Variante",
-                fontFamily = SpaceGrotesk,
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp
-            )
-            
-            val variants = listOf("Pierna", "Lomo")
-            var selectedVariant by remember { mutableStateOf("Pierna") }
-            
-            LazyRow(
-                modifier = Modifier.padding(top = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(variants) { variant ->
-                    FilterChip(
-                        selected = selectedVariant == variant,
-                        onClick = { selectedVariant = variant },
-                        label = { Text(variant) },
-                        shape = RoundedCornerShape(12.dp),
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = Primary.copy(alpha = 0.1f),
-                            selectedLabelColor = Primary,
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                            labelColor = MaterialTheme.colorScheme.onSurfaceVariant
-                        ),
-                        border = if (selectedVariant == variant) BorderStroke(1.dp, Primary) else null
+            // 3. Rating y Stock
+            Row(modifier = Modifier.padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(FontAwesomeIcons.Solid.Star, null, tint = Color(0xFFFFB300), modifier = Modifier.size(16.dp))
+                Text(" 4.8", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Spacer(Modifier.width(16.dp))
+                val stockColor = if (currentStock > 0) Color(0xFF4CAF50) else Error
+                Surface(color = stockColor.copy(alpha = 0.1f), shape = RoundedCornerShape(8.dp)) {
+                    Text(
+                        text = if (currentStock > 0) "En Stock ($currentStock)" else "Agotado",
+                        color = stockColor,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(32.dp))
 
-            // 6. Description
-            Text(
-                "Description",
-                fontFamily = SpaceGrotesk,
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp
-            )
+            // 4. Selector de Variantes (Solo si existen)
+            if (product.variants.isNotEmpty()) {
+                Text("Selecciona una opción", fontFamily = SpaceGrotesk, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                LazyRow(modifier = Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    items(product.variants) { variant ->
+                        val isSelected = selectedVariant?.id == variant.id
+                        Surface(
+                            modifier = Modifier.clickable { selectedVariant = variant },
+                            shape = RoundedCornerShape(16.dp),
+                            color = if (isSelected) Primary.copy(alpha = 0.1f) else Color.Transparent,
+                            border = BorderStroke(1.dp, if (isSelected) Primary else SoftGray)
+                        ) {
+                            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(variant.name, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal, color = if (isSelected) Primary else OnSurface)
+                                if (variant.price != null) {
+                                    Text("$${variant.price.formatPrice()}", fontSize = 11.sp, color = if (isSelected) Primary else OnSurfaceVariant)
+                                }
+                            }
+                        }
+                    }
+                }
+                Spacer(Modifier.height(32.dp))
+            }
 
-            Spacer(Modifier.height(10.dp))
-
+            // 5. Descripción
+            Text("Descripción", fontFamily = SpaceGrotesk, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            Spacer(Modifier.height(8.dp))
             Text(
                 text = product.description,
                 style = MaterialTheme.typography.bodyMedium,
-                fontFamily = Inter,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                lineHeight = 20.sp
+                color = OnSurfaceVariant,
+                lineHeight = 22.sp,
+                textAlign = TextAlign.Justify
             )
 
-            Spacer(Modifier.height(100.dp)) // Space for bottom button
+            Spacer(Modifier.height(120.dp))
         }
     }
 
-    // 7. Bottom Action Bar
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(20.dp),
-        contentAlignment = Alignment.BottomCenter
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+    // 6. Botón de Acción Fijo
+    Box(modifier = Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.BottomCenter) {
+        Button(
+            onClick = { 
+                // Creamos un objeto producto temporal con los datos de la variante elegida
+                val finalProduct = product.copy(
+                    price = currentPrice,
+                    stock = currentStock,
+                    name = if (selectedVariant != null) "${product.name} (${selectedVariant!!.name})" else product.name
+                )
+                onAddToCart(finalProduct)
+            },
+            enabled = currentStock > 0,
+            modifier = Modifier.fillMaxWidth().height(56.dp),
+            shape = RoundedCornerShape(18.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = OnSurface)
         ) {
-            Button(
-                onClick = { },
-                modifier = Modifier
-                    .weight(1f)
-                    .height(56.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Primary)
-            ) {
-                Text("Buy Now", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-            }
-            
-            Surface(
-                modifier = Modifier
-                    .size(56.dp)
-                    .clickable { onAddToCart() },
-                shape = RoundedCornerShape(16.dp),
-                color = SurfaceVariant.copy(alpha = 0.5f),
-                border = BorderStroke(1.dp, SoftGray)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = FontAwesomeIcons.Solid.ShoppingCart,
-                        contentDescription = "Add to Cart",
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-            }
+            Text("Añadir al Carrito", fontWeight = FontWeight.Bold, fontSize = 16.sp, fontFamily = SpaceGrotesk)
         }
     }
 }

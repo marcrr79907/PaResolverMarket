@@ -2,9 +2,9 @@ package com.market.paresolvershop.ui.orders
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.market.paresolvershop.data.repository.OrderRepository
 import com.market.paresolvershop.domain.model.DataResult
 import com.market.paresolvershop.domain.model.Order
+import com.market.paresolvershop.domain.orders.GetOrderHistoryUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -16,7 +16,7 @@ sealed interface OrderHistoryUiState {
 }
 
 class OrderHistoryViewModel(
-    private val orderRepository: OrderRepository
+    private val getOrderHistoryUseCase: GetOrderHistoryUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<OrderHistoryUiState>(OrderHistoryUiState.Loading)
@@ -24,11 +24,10 @@ class OrderHistoryViewModel(
 
     init {
         viewModelScope.launch {
-            orderRepository.orders.collect { ordersList ->
+            getOrderHistoryUseCase.orders.collect { ordersList ->
                 _uiState.value = OrderHistoryUiState.Success(ordersList)
             }
         }
-        // Forzar la primera carga desde Supabase
         fetchOrders()
     }
 
@@ -38,7 +37,7 @@ class OrderHistoryViewModel(
                 _uiState.value = OrderHistoryUiState.Loading
             }
             
-            val result = orderRepository.fetchOrders()
+            val result = getOrderHistoryUseCase()
             if (result is DataResult.Error) {
                 _uiState.value = OrderHistoryUiState.Error(result.message)
             }

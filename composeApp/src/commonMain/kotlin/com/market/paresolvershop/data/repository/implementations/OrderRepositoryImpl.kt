@@ -1,9 +1,9 @@
 package com.market.paresolvershop.data.repository.implementations
 
 import com.market.paresolvershop.data.model.OrderEntity
-import com.market.paresolvershop.data.model.OrderItemEntity
+import com.market.paresolvershop.data.model.OrderItemWithProductEntity
 import com.market.paresolvershop.data.model.toDomain
-import com.market.paresolvershop.data.model.toEntity
+import com.market.paresolvershop.data.model.toDomainPair
 import com.market.paresolvershop.data.repository.AuthRepository
 import com.market.paresolvershop.data.repository.OrderRepository
 import com.market.paresolvershop.domain.model.DataResult
@@ -13,8 +13,8 @@ import com.market.paresolvershop.domain.model.Product
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
-import io.github.jan.supabase.postgrest.query.Order as SupabaseOrderDirection
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -23,6 +23,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import io.github.jan.supabase.postgrest.query.Order as SupabaseOrderDirection
 
 class OrderRepositoryImpl(
     private val supabase: SupabaseClient,
@@ -47,20 +51,35 @@ class OrderRepositoryImpl(
 
     override suspend fun createOrder(order: Order, items: List<OrderItem>): DataResult<String> = withContext(Dispatchers.Default) {
         try {
-            val dbOrder = order.toEntity()
-            val insertedOrder = supabase.from("orders").insert(dbOrder) {
-                select()
-            }.decodeSingle<OrderEntity>()
+            val itemsJson = buildJsonArray {
+                items.forEach { item ->
+                    add(buildJsonObject {
+                        put("product_id", item.productId)
+                        put("quantity", item.quantity)
+                        put("price_at_purchase", item.priceAtPurchase)
+                    })
+                }
+            }
 
-            val orderId = insertedOrder.id ?: throw Exception("No order ID returned")
+            val response = supabase.postgrest.rpc(
+                function = "create_order_secure",
+                parameters = buildJsonObject {
+                    put("p_user_id", order.userId)
+                    put("p_address_id", order.addressId)
+                    put("p_total_amount", order.totalAmount)
+                    put("p_payment_method", order.paymentMethod)
+                    put("p_items", itemsJson)
+                }
+            )
 
-            val dbItems = items.map { it.copy(orderId = orderId).toEntity() }
-            supabase.from("order_items").insert(dbItems)
+            // Decodificamos el resultado (el ID del pedido) directamente
+            val orderId = response.decodeAs<String>()
 
             fetchOrders()
             DataResult.Success(orderId)
         } catch (e: Exception) {
-            DataResult.Error(e.message ?: "Error al crear el pedido")
+            // Si el servidor devuelve "Stock insuficiente", llegará aquí en el e.message
+            DataResult.Error(e.message ?: "Error al procesar el pedido.")
         }
     }
 
@@ -68,7 +87,7 @@ class OrderRepositoryImpl(
         try {
             val user = supabase.auth.currentUserOrNull() ?:
             return@withContext DataResult.Error("Inicia sesión")
-            
+
             val result = supabase.from("orders").select(
                 columns = Columns.raw("*, user_addresses(*)")
             ) {
@@ -85,7 +104,6 @@ class OrderRepositoryImpl(
 
     override suspend fun fetchAllOrdersAdmin(): DataResult<List<Order>> = withContext(Dispatchers.Default) {
         try {
-            // Join con user_addresses Y con users para obtener el nombre del cliente
             val result = supabase.from("orders").select(
                 columns = Columns.raw("*, user_addresses(*), users(name)")
             ) {
@@ -103,7 +121,7 @@ class OrderRepositoryImpl(
             supabase.from("orders").update(mapOf("status" to newStatus)) {
                 filter { eq("id", orderId) }
             }
-            // No llamamos a fetchOrders() aquí porque el admin gestiona órdenes de terceros
+            fetchOrders() 
             DataResult.Success(Unit)
         } catch (e: Exception) {
             DataResult.Error(e.message ?: "Error al actualizar estado")
@@ -112,20 +130,17 @@ class OrderRepositoryImpl(
 
     override suspend fun getOrderItems(orderId: String): DataResult<List<Pair<OrderItem, Product>>> = withContext(Dispatchers.Default) {
         try {
+            val results = supabase.from("order_items")
+                .select(columns = Columns.raw("*, products(*)")) {
+                    filter { eq("order_id", orderId) }
+                }.decodeList<OrderItemWithProductEntity>()
             // OPTIMIZACIÓN: Usamos Join para traer el producto en una sola consulta
             val entities = supabase.from("order_items")
                 .select(columns = Columns.raw("*, products(*)")) {
                     filter { eq("order_id", orderId) }
-                }.decodeList<OrderItemEntity>()
+                }.decodeList<OrderItemWithProductEntity>()
 
-            val result = entities.mapNotNull { entity ->
-                val domainProduct = entity.product?.toDomain()
-                if (domainProduct != null) {
-                    entity.toDomain() to domainProduct
-                } else null
-            }
-
-            DataResult.Success(result)
+            DataResult.Success(results.map { it.toDomainPair() })
         } catch (e: Exception) {
             DataResult.Error(e.message ?: "Error al obtener detalles")
         }

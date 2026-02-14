@@ -39,7 +39,6 @@ class CartRepositoryImpl(
 
     private suspend fun fetchCartItemsForUser(userId: String): List<CartItem> {
         return try {
-            // Usamos select con join de products para traer todo en una sola consulta
             val entities = supabase.from("cart_items")
                 .select(
                     columns = Columns.raw("*, products(*)")
@@ -67,12 +66,12 @@ class CartRepositoryImpl(
                     supabase.from("cart_items").update({ CartItemEntity::quantity setTo newQuantity }) {
                         filter { eq("user_id", userId); eq("product_id", product.id) }
                     }
-                } else return DataResult.Error("Sin stock suficiente")
+                } else return DataResult.Error("Sin stock suficiente (Disponible: ${product.stock})")
             } else {
                 if (product.stock >= quantity) {
                     val cartItem = CartItem(product, quantity)
                     supabase.from("cart_items").insert(cartItem.toEntity(userId))
-                } else return DataResult.Error("Sin stock suficiente")
+                } else return DataResult.Error("Sin stock suficiente (Disponible: ${product.stock})")
             }
             cartRefreshTrigger.emit(Unit)
             DataResult.Success(Unit)
@@ -85,6 +84,15 @@ class CartRepositoryImpl(
         val userId = authRepository.getCurrentUser()?.id ?: return DataResult.Error("Inicia sesión")
         return try {
             if (quantity > 0) {
+                // Verificar stock antes de actualizar
+                val product = supabase.from("products").select {
+                    filter { eq("id", productId) }
+                }.decodeSingle<Product>()
+
+                if (quantity > product.stock) {
+                    return DataResult.Error("Límite de stock alcanzado (${product.stock})")
+                }
+
                 supabase.from("cart_items").update({ CartItemEntity::quantity setTo quantity }) {
                     filter { eq("user_id", userId); eq("product_id", productId) }
                 }

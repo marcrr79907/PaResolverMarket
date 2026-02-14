@@ -2,6 +2,7 @@ package com.market.paresolvershop.ui.components
 
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -10,28 +11,32 @@ import androidx.compose.ui.platform.LocalContext
 @Composable
 actual fun ImagePicker(
     show: Boolean,
-    onImageSelected: (ByteArray?) -> Unit
+    multiple: Boolean,
+    onImagesSelected: (List<ByteArray>?) -> Unit
 ) {
     val context = LocalContext.current
 
-    // 1. Crear el lanzador para la actividad de selección de contenido
     val launcher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent(),
-        onResult = { uri: Uri? ->
-            if (uri == null) {
-                onImageSelected(null)
-                return@rememberLauncherForActivityResult
-            }
-            // Leer los bytes de la imagen seleccionada
-            val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
-            onImageSelected(bytes)
+        contract = if (multiple) ActivityResultContracts.PickMultipleVisualMedia()
+        else ActivityResultContracts.PickVisualMedia()
+    ) { uris ->
+        // Convertir el URI único a lista si no es múltiple
+        val uriList = when (uris) {
+            is List<*> -> uris as List<Uri>
+            is Uri -> listOf(uris)
+            else -> emptyList()
         }
-    )
 
-    // 2. Lanzar el selector de imágenes cuando `show` sea verdadero
+        val bytesList = uriList.mapNotNull { uri ->
+            context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+        }
+        onImagesSelected(bytesList)
+    }
+
     LaunchedEffect(show) {
         if (show) {
-            launcher.launch("image/*") // Especificamos que queremos seleccionar imágenes
+            val request = PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+            launcher.launch(request)
         }
     }
 }
