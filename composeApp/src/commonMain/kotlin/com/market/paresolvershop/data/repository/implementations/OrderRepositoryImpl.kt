@@ -94,7 +94,7 @@ class OrderRepositoryImpl(
                 filter { eq("user_id", user.id) }
                 order("created_at", SupabaseOrderDirection.DESCENDING)
             }.decodeList<OrderEntity>()
-            
+
             _orders.value = result.map { it.toDomain() }
             DataResult.Success(Unit)
         } catch (e: Exception) {
@@ -109,7 +109,7 @@ class OrderRepositoryImpl(
             ) {
                 order("created_at", SupabaseOrderDirection.DESCENDING)
             }.decodeList<OrderEntity>()
-            
+
             DataResult.Success(result.map { it.toDomain() })
         } catch (e: Exception) {
             DataResult.Error(e.message ?: "Error al cargar todas las órdenes")
@@ -121,7 +121,7 @@ class OrderRepositoryImpl(
             supabase.from("orders").update(mapOf("status" to newStatus)) {
                 filter { eq("id", orderId) }
             }
-            fetchOrders() 
+            fetchOrders()
             DataResult.Success(Unit)
         } catch (e: Exception) {
             DataResult.Error(e.message ?: "Error al actualizar estado")
@@ -131,11 +131,6 @@ class OrderRepositoryImpl(
     override suspend fun getOrderItems(orderId: String): DataResult<List<Pair<OrderItem, Product>>> = withContext(Dispatchers.Default) {
         try {
             val results = supabase.from("order_items")
-                .select(columns = Columns.raw("*, products(*)")) {
-                    filter { eq("order_id", orderId) }
-                }.decodeList<OrderItemWithProductEntity>()
-            // OPTIMIZACIÓN: Usamos Join para traer el producto en una sola consulta
-            val entities = supabase.from("order_items")
                 .select(columns = Columns.raw("*, products(*)")) {
                     filter { eq("order_id", orderId) }
                 }.decodeList<OrderItemWithProductEntity>()
@@ -153,7 +148,7 @@ class OrderRepositoryImpl(
             ) {
                 filter { eq("id", orderId) }
             }.decodeSingle<OrderEntity>()
-            
+
             DataResult.Success(entity.toDomain())
         } catch (e: Exception) {
             DataResult.Error(e.message ?: "Error al obtener la orden")
