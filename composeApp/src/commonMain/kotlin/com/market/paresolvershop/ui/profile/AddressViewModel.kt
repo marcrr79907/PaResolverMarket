@@ -2,7 +2,7 @@ package com.market.paresolvershop.ui.profile
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.market.paresolvershop.data.repository.AddressRepository
+import com.market.paresolvershop.domain.address.*
 import com.market.paresolvershop.domain.model.DataResult
 import com.market.paresolvershop.domain.model.UserAddress
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -25,7 +25,10 @@ sealed interface AddressEvent {
 }
 
 class AddressViewModel(
-    private val repository: AddressRepository
+    private val getAddressesUseCase: GetAddressesUseCase,
+    private val saveAddressUseCase: SaveAddressUseCase,
+    private val deleteAddressUseCase: DeleteAddressUseCase,
+    private val setDefaultAddressUseCase: SetDefaultAddressUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<AddressUiState>(AddressUiState.Loading)
@@ -36,7 +39,7 @@ class AddressViewModel(
 
     init {
         viewModelScope.launch {
-            repository.addresses.collect { list ->
+            getAddressesUseCase.addresses.collect { list ->
                 _uiState.value = AddressUiState.Success(list)
             }
         }
@@ -46,12 +49,10 @@ class AddressViewModel(
     fun refreshAddresses() {
         viewModelScope.launch {
             _uiState.value = AddressUiState.Loading
-            when (val result = repository.fetchAddresses()) {
+            when (val result = getAddressesUseCase()) {
                 is DataResult.Error -> _uiState.value = AddressUiState.Error(result.message)
                 is DataResult.Success -> {
-                    // Forzamos el estado Success con el valor actual del repositorio
-                    // por si el flow no emitió (ej. lista vacía a lista vacía)
-                    _uiState.value = AddressUiState.Success(repository.addresses.value)
+                    _uiState.value = AddressUiState.Success(getAddressesUseCase.addresses.value)
                 }
             }
         }
@@ -60,14 +61,13 @@ class AddressViewModel(
     fun saveAddress(address: UserAddress) {
         viewModelScope.launch {
             _uiState.value = AddressUiState.Loading
-            when (val result = repository.saveAddress(address)) {
+            when (val result = saveAddressUseCase(address)) {
                 is DataResult.Error -> {
                     _eventFlow.emit(AddressEvent.Error(result.message))
-                    _uiState.value = AddressUiState.Success(repository.addresses.value)
+                    _uiState.value = AddressUiState.Success(getAddressesUseCase.addresses.value)
                 }
                 is DataResult.Success -> {
                     _eventFlow.emit(AddressEvent.Success("Dirección guardada correctamente"))
-                    // Success se actualizará vía collect del init
                 }
             }
         }
@@ -75,7 +75,7 @@ class AddressViewModel(
 
     fun deleteAddress(addressId: String) {
         viewModelScope.launch {
-            when (val result = repository.deleteAddress(addressId)) {
+            when (val result = deleteAddressUseCase(addressId)) {
                 is DataResult.Error -> _eventFlow.emit(AddressEvent.Error(result.message))
                 is DataResult.Success -> _eventFlow.emit(AddressEvent.Success("Dirección eliminada"))
             }
@@ -84,7 +84,10 @@ class AddressViewModel(
 
     fun setDefault(addressId: String) {
         viewModelScope.launch {
-            repository.setDefaultAddress(addressId)
+            when (val result = setDefaultAddressUseCase(addressId)) {
+                is DataResult.Error -> _eventFlow.emit(AddressEvent.Error(result.message))
+                is DataResult.Success -> _eventFlow.emit(AddressEvent.Success("Dirección predeterminada establecida"))
+            }
         }
     }
 }

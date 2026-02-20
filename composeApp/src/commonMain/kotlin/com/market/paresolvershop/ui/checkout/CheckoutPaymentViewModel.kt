@@ -2,13 +2,11 @@ package com.market.paresolvershop.ui.checkout
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.market.paresolvershop.data.repository.CartRepository
-import com.market.paresolvershop.data.repository.OrderRepository
 import com.market.paresolvershop.domain.model.CartItem
 import com.market.paresolvershop.domain.model.DataResult
 import com.market.paresolvershop.domain.model.Order
-import com.market.paresolvershop.domain.model.OrderItem
 import com.market.paresolvershop.domain.model.UserAddress
+import com.market.paresolvershop.domain.orders.PlaceOrderUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -21,8 +19,7 @@ sealed interface CheckoutPaymentUiState {
 }
 
 class CheckoutPaymentViewModel(
-    private val orderRepository: OrderRepository,
-    private val cartRepository: CartRepository
+    private val placeOrderUseCase: PlaceOrderUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<CheckoutPaymentUiState>(CheckoutPaymentUiState.Idle)
@@ -34,7 +31,9 @@ class CheckoutPaymentViewModel(
             
             val userId = address.userId ?: ""
             val addressId = address.id ?: ""
-            val totalAmount = items.sumOf { it.product.price * it.quantity } + 13.0 
+            // Nota: El cálculo del total debería idealmente ser validado en el dominio (UseCase)
+            val subtotal = items.sumOf { it.product.price * it.quantity }
+            val totalAmount = subtotal + 13.0 
 
             val order = Order(
                 userId = userId,
@@ -43,21 +42,10 @@ class CheckoutPaymentViewModel(
                 paymentMethod = paymentMethod
             )
 
-            val orderItems = items.map { item ->
-                OrderItem(
-                    orderId = "", 
-                    productId = item.product.id,
-                    quantity = item.quantity,
-                    priceAtPurchase = item.product.price
-                )
-            }
-
-            // 1. Crear la orden en Supabase
-            when (val result = orderRepository.createOrder(order, orderItems)) {
+            // CORRECCIÓN: Pasamos 'items' (List<CartItem>) directamente. 
+            // El UseCase se encarga del mapeo a OrderItem y de limpiar el carrito.
+            when (val result = placeOrderUseCase(order, items)) {
                 is DataResult.Success -> {
-                    // 2. Limpiar el carrito ANTES de marcar el éxito
-                    cartRepository.clearCart()
-                    // 3. Emitir éxito
                     _uiState.value = CheckoutPaymentUiState.Success(result.data)
                 }
                 is DataResult.Error -> {
