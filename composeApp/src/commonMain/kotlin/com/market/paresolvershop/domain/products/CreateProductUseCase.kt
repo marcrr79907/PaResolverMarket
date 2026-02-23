@@ -49,7 +49,6 @@ class CreateProductUseCase(
             price = price,
             stock = stock,
             imageUrl = mainImageUrl,
-            category = "",
             categoryId = categoryId,
             images = imageUrls,
             variants = variants

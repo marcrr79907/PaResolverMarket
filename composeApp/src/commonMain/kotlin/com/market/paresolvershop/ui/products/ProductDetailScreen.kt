@@ -186,7 +186,7 @@ fun ProductDetailContent(product: Product, onAddToCart: (Product) -> Unit) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(text = product.name, fontFamily = SpaceGrotesk, fontWeight = FontWeight.Bold, fontSize = 26.sp)
-                    Text(text = product.category, color = OnSurfaceVariant, fontSize = 14.sp)
+                    Text(text = product.categoryName ?: "Sin categoría", color = OnSurfaceVariant, fontSize = 14.sp)
                 }
                 Text(
                     text = "$${currentPrice.formatPrice()}",

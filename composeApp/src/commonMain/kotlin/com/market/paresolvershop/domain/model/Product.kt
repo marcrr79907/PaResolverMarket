@@ -11,15 +11,15 @@ data class Product(
     @SerialName("price") val price: Double,
     @SerialName("stock") val stock: Int,
     @SerialName("image_url") val imageUrl: String? = null,
-    @SerialName("category") val category: String,
     @SerialName("category_id") val categoryId: String? = null,
     @SerialName("vendor_id") val vendorId: String? = null,
-    @SerialName("status") val status: String = "approved", // approved, pending, rejected
+    @SerialName("status") val status: String = "approved",
     @SerialName("created_at") val createdAt: String? = null,
-
-    // Nuevos campos para E-commerce profesional
+    
+    // Campos para E-commerce profesional
     val images: List<String> = emptyList(),
-    val variants: List<ProductVariant> = emptyList()
+    val variants: List<ProductVariant> = emptyList(),
+    val categoryName: String? = null // El nombre vendrá de un JOIN en la base de datos
 )
 
 @Serializable

@@ -107,7 +107,6 @@ class EditProductViewModel(
                 price = priceDouble,
                 stock = stockInt,
                 categoryId = formState.categoryId,
-                category = "",
                 variants = variants
             )
 

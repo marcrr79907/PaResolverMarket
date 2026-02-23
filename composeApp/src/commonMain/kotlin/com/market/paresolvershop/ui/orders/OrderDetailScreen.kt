@@ -205,7 +205,7 @@ fun OrderDetailContent(
                 OrderProductItemRow(
                     name = product.name,
                     imageUrl = product.imageUrl,
-                    category = product.category,
+                    category = product.categoryName ?: "Sin categoría",
                     quantity = orderItem.quantity,
                     price = orderItem.priceAtPurchase
                 )
