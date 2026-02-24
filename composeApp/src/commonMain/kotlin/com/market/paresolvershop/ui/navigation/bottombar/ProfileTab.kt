@@ -15,11 +15,13 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import cafe.adriel.voyager.navigator.tab.LocalTabNavigator
 import cafe.adriel.voyager.navigator.tab.Tab
 import cafe.adriel.voyager.navigator.tab.TabOptions
 import com.market.paresolvershop.ui.admin.AdminScreen
 import com.market.paresolvershop.ui.authentication.LoginScreen
 import com.market.paresolvershop.ui.authentication.RegisterScreen
+import com.market.paresolvershop.ui.orders.OrderHistoryScreen
 import com.market.paresolvershop.ui.profile.AddressManagementScreen
 import com.market.paresolvershop.ui.profile.GuestProfileScreen
 import com.market.paresolvershop.ui.profile.ProfileScreen
@@ -51,6 +53,7 @@ object ProfileRootScreen : Screen {
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
+        val tabNavigator = LocalTabNavigator.current
         val viewModel = koinViewModel<ProfileViewModel>()
         val uiState by viewModel.uiState.collectAsState()
 
@@ -61,7 +64,7 @@ object ProfileRootScreen : Screen {
                     userName = state.user.name,
                     isAdmin = state.isAdmin,
                     onNavigateToAdmin = { navigator.push(AdminScreen) },
-                    onNavigateToHistory = { /* Implementar más tarde */ },
+                    onNavigateToHistory = { tabNavigator.current = OrderTab },
                     onNavigateToAddresses = { navigator.push(AddressManagementScreen()) },
                     onLogout = viewModel::logOut
                 )

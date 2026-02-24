@@ -10,6 +10,7 @@ import com.market.paresolvershop.di.checkoutModule
 import com.market.paresolvershop.di.orderModule
 import com.market.paresolvershop.di.platformModule
 import com.market.paresolvershop.di.productModule
+import com.market.paresolvershop.di.storeConfigModule
 import com.market.paresolvershop.di.supabaseModule
 import com.market.paresolvershop.ui.navigation.bottombar.BottomBarScreen
 import com.market.paresolvershop.ui.theme.ShopAppTheme
@@ -28,6 +29,7 @@ fun App() {
                 orderModule,
                 platformModule,
                 productModule,
+                storeConfigModule,
                 supabaseModule,
             )
         }

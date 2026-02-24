@@ -10,6 +10,7 @@ import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.auth.providers.builtin.IDToken
 import io.github.jan.supabase.auth.status.SessionStatus
 import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -36,25 +37,21 @@ class AuthRepositoryImpl(
 
     private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-    // Fuente de verdad reactiva: contiene el usuario enriquecido con el rol de la tabla 'users'
     private val _currentUser = MutableStateFlow<AuthUserEntity?>(null)
     override val authState: Flow<AuthUserEntity?> = _currentUser.asStateFlow()
 
     init {
-        // Observamos el estado de la sesión de Supabase Auth de forma global
         repositoryScope.launch {
             supabase.auth.sessionStatus.collect { status ->
                 when (status) {
                     is SessionStatus.Authenticated -> {
                         val user = status.session.user
                         if (user != null) {
-                            // Sincronizamos con la tabla 'users' de la base de datos
                             try {
                                 val profile = fetchProfileFromDb(user.id)
                                 _currentUser.value = profile
                             } catch (e: Exception) {
-                                // Si no se encuentra el perfil aún (ej. trigger lento), no limpiamos el estado aún
-                                // El retry de fetchProfileFromDb ya hace su trabajo
+                                // Error silencioso en el init para evitar loops de UI
                             }
                         }
                     }
@@ -83,7 +80,7 @@ class AuthRepositoryImpl(
             } catch (e: Exception) {
                 lastError = e.message
             }
-            if (attempt < 2) delay(1000) // Esperar 1 segundo antes de reintentar
+            if (attempt < 2) delay(1000)
         }
 
         return profile?.let {
@@ -93,7 +90,7 @@ class AuthRepositoryImpl(
                 name = it.name,
                 role = it.role
             )
-        } ?: throw Exception(lastError ?: "No se encontró el perfil de usuario.")
+        } ?: throw Exception(lastError ?: "Perfil de usuario no encontrado en la tabla 'users'.")
     }
 
     override fun getCurrentUser(): AuthUserEntity? = _currentUser.value
@@ -105,7 +102,7 @@ class AuthRepositoryImpl(
                 this.password = password
             }
 
-            val user = supabase.auth.currentUserOrNull() ?: error("Usuario no encontrado")
+            val user = supabase.auth.currentUserOrNull() ?: error("Error en la sesión de Supabase")
             val profile = fetchProfileFromDb(user.id)
 
             _currentUser.value = profile
@@ -161,16 +158,27 @@ class AuthRepositoryImpl(
         _currentUser.value = null
     }
 
+    override suspend fun deleteAccount(): DataResult<Unit> {
+        return try {
+            supabase.postgrest.rpc("delete_user_account")
+            signOut()
+            DataResult.Success(Unit)
+        } catch (e: Exception) {
+            DataResult.Error(e.message ?: "Fallo al ejecutar borrado en servidor.")
+        }
+    }
+
     private fun mapAuthError(e: Exception): String {
         val message = e.message ?: ""
         return when {
             message.contains("invalid_credentials", true) -> "Email o contraseña incorrectos."
-            message.contains("Email not confirmed", true) -> "Por favor, confirma tu cuenta en tu correo electrónico."
-            message.contains("rate_limit", true) -> "Demasiados intentos. Por favor, espera un momento."
-            message.contains("already registered", true) -> "Este correo electrónico ya está registrado."
-            message.contains("network", true) -> "Sin conexión a internet. Revisa tu red."
-            message.contains("Invalid login credentials", true) -> "Credenciales inválidas."
-            else -> "Ocurrió un error inesperado. Inténtalo de nuevo."
+            message.contains("Email not confirmed", true) -> "Confirma tu cuenta en tu email."
+            message.contains("rate_limit", true) -> "Demasiados intentos. Espera un poco."
+            message.contains("already registered", true) -> "Este email ya existe."
+            message.contains("network", true) -> "Sin conexión a internet."
+            // Si el error es de RLS o perfil faltante, lo mostramos tal cual para depurar
+            message.contains("Perfil de usuario no encontrado", true) -> message
+            else -> "Error: $message" // Cambiado de "Error inesperado" a mostrar el mensaje real
         }
     }
 }

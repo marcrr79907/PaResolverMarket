@@ -1,6 +1,7 @@
 package com.market.paresolvershop.di
 
 import com.market.paresolvershop.data.repository.implementations.AuthRepositoryImpl
+import com.market.paresolvershop.domain.auth.DeleteAccountUseCase
 import com.market.paresolvershop.domain.auth.IsUserLoggedInUseCase
 import com.market.paresolvershop.domain.auth.ObserveAuthState
 import com.market.paresolvershop.domain.auth.SignInWithEmail
@@ -20,6 +21,7 @@ val authModule = module {
     singleOf(::AuthRepositoryImpl)
 
     // Use Cases
+    factoryOf(::DeleteAccountUseCase)
     factoryOf(::IsUserLoggedInUseCase)
     factoryOf(::SignInWithEmail)
     factoryOf(::SignInWithGoogle)
