@@ -11,18 +11,16 @@ import com.market.paresolvershop.domain.cart.UpdateCartQuantityUseCase
 import com.market.paresolvershop.domain.model.CartItem
 import com.market.paresolvershop.domain.model.DataResult
 import com.market.paresolvershop.domain.model.Product
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
+import com.market.paresolvershop.domain.model.StoreConfig
+import com.market.paresolvershop.domain.store.GetStoreConfigUseCase
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 data class CartUiState(
     val items: List<CartItem> = emptyList(),
     val subtotal: Double = 0.0,
-    val isValid: Boolean = true // Indica si todos los items tienen stock suficiente
+    val isValid: Boolean = true, // Indica si todos los items tienen stock suficiente
+    val config: StoreConfig? = null
 )
 
 sealed interface CartEvent {
@@ -36,23 +34,37 @@ class CartViewModel(
     private val getCartItemsUseCase: GetCartItemsUseCase,
     private val removeFromCartUseCase: RemoveFromCartUseCase,
     private val updateCartQuantityUseCase: UpdateCartQuantityUseCase,
-    private val isUserLoggedInUseCase: IsUserLoggedInUseCase
+    private val isUserLoggedInUseCase: IsUserLoggedInUseCase,
+    private val getStoreConfigUseCase: GetStoreConfigUseCase
 ) : ViewModel() {
 
-    val uiState: StateFlow<CartUiState> = getCartItemsUseCase()
-        .map { items ->
-            val subtotal = items.sumOf { it.product.price * it.quantity }
-            val isValid = items.all { it.quantity <= it.product.stock }
-            CartUiState(items = items, subtotal = subtotal, isValid = isValid)
-        }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = CartUiState()
+    val uiState: StateFlow<CartUiState> = combine(
+        getCartItemsUseCase(),
+        getStoreConfigUseCase.storeConfig
+    ) { items, config ->
+        val subtotal = items.sumOf { it.product.price * it.quantity }
+        val isValid = items.all { it.quantity <= it.product.stock }
+        CartUiState(
+            items = items,
+            subtotal = subtotal,
+            isValid = isValid,
+            config = config
         )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = CartUiState()
+    )
 
     private val _eventFlow = MutableSharedFlow<CartEvent>()
     val eventFlow = _eventFlow.asSharedFlow()
+
+    init {
+        // Disparamos la carga inicial de la configuración
+        viewModelScope.launch {
+            getStoreConfigUseCase()
+        }
+    }
 
     fun isUserLoggedIn(): Boolean {
         return isUserLoggedInUseCase()

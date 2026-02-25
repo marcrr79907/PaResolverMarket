@@ -13,13 +13,19 @@ data class ProductEntity(
     @SerialName("price") val price: Double,
     @SerialName("stock") val stock: Int,
     @SerialName("image_url") val imageUrl: String? = null,
-    @SerialName("category") val category: String? = null,
     @SerialName("category_id") val categoryId: String? = null,
     @SerialName("vendor_id") val vendorId: String? = null,
     @SerialName("status") val status: String = "approved",
     
+    // JOINs para lectura
+    @SerialName("categories") val categoryJoin: CategoryJoinEntity? = null,
     @SerialName("product_images") val images: List<ProductImageEntity>? = null,
     @SerialName("product_variants") val variants: List<ProductVariantEntity>? = null
+)
+
+@Serializable
+data class CategoryJoinEntity(
+    @SerialName("name") val name: String
 )
 
 @Serializable
@@ -59,10 +65,10 @@ fun ProductEntity.toDomain(): Product {
         price = this.price,
         stock = this.stock,
         imageUrl = this.imageUrl,
-        category = this.category ?: "",
         categoryId = this.categoryId,
         vendorId = this.vendorId,
         status = this.status,
+        categoryName = this.categoryJoin?.name,
         images = this.images?.map { it.image_url } ?: emptyList(),
         variants = this.variants?.map { it.toDomain() } ?: emptyList()
     )
@@ -99,7 +105,6 @@ fun Product.toEntity(): ProductEntity {
         price = this.price,
         stock = this.stock,
         imageUrl = this.imageUrl,
-        category = this.category,
         categoryId = this.categoryId,
         vendorId = this.vendorId,
         status = this.status

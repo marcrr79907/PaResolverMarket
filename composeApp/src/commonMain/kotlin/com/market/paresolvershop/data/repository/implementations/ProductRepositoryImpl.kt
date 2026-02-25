@@ -29,7 +29,7 @@ class ProductRepositoryImpl(
             flow {
                 try {
                     val result = supabase.from("products").select(
-                        columns = Columns.raw("*, product_images(*), product_variants(*)")
+                        columns = Columns.raw("*, categories(name), product_images(*), product_variants(*)")
                     ) {
                         filter {
                             eq("status", "approved") 
@@ -53,7 +53,7 @@ class ProductRepositoryImpl(
 
     override suspend fun getProductById(id: String): DataResult<Product> = runCatching {
         val entity = supabase.from("products").select(
-            columns = Columns.raw("*, product_images(*), product_variants(*)")
+            columns = Columns.raw("*, categories(name), product_images(*), product_variants(*)")
         ) {
             filter { eq("id", id) }
         }.decodeSingle<ProductEntity>()
@@ -96,12 +96,10 @@ class ProductRepositoryImpl(
     }
 
     override suspend fun updateProduct(product: Product): DataResult<Unit> = runCatching {
-        // 1. Actualizar información básica en la tabla 'products'
         supabase.from("products").update(product.toUpdateEntity()) {
             filter { eq("id", product.id) }
         }
 
-        // 2. Sincronizar Imágenes: Borramos las anteriores y guardamos la lista actual
         supabase.from("product_images").delete {
             filter { eq("product_id", product.id) }
         }
@@ -112,7 +110,6 @@ class ProductRepositoryImpl(
             supabase.from("product_images").insert(imagesEntities)
         }
 
-        // 3. Sincronizar Variantes: Borramos las anteriores y guardamos las nuevas
         supabase.from("product_variants").delete {
             filter { eq("product_id", product.id) }
         }
@@ -136,7 +133,7 @@ class ProductRepositoryImpl(
     }
 
     override suspend fun deleteProduct(productId: String): DataResult<Unit> = runCatching {
-        supabase.from("products").delete {
+        supabase.from("products").update(mapOf("status" to "deleted")) {
             filter { eq("id", productId) }
         }
         refreshTrigger.emit(Unit)
@@ -147,8 +144,10 @@ class ProductRepositoryImpl(
 
     override suspend fun getAllProductsAdmin(): DataResult<List<Product>> = runCatching {
         val result = supabase.from("products").select(
-            columns = Columns.raw("*, product_images(*), product_variants(*)")
-        ).decodeList<ProductEntity>()
+            columns = Columns.raw("*, categories(name), product_images(*), product_variants(*)")
+        ) {
+            filter { neq("status", "deleted") }
+        }.decodeList<ProductEntity>()
         DataResult.Success(result.map { it.toDomain() })
     }.getOrElse {
         DataResult.Error(it.message ?: "Error al cargar inventario")

@@ -1,12 +1,14 @@
 package com.market.paresolvershop.ui.components
 
 import androidx.compose.animation.*
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -19,8 +21,9 @@ import compose.icons.fontawesomeicons.solid.ChevronDown
 @Composable
 fun ScrollIndicator(
     visible: Boolean,
-    text: String = "More items",
-    modifier: Modifier = Modifier
+    text: String = "Ver más",
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {} // Nuevo parámetro para la acción de scroll
 ) {
     AnimatedVisibility(
         visible = visible,
@@ -31,10 +34,13 @@ fun ScrollIndicator(
         Surface(
             color = Primary.copy(alpha = 0.9f),
             shape = CircleShape,
-            shadowElevation = 4.dp
+            shadowElevation = 6.dp,
+            modifier = Modifier
+                .clip(CircleShape)
+                .clickable { onClick() } // Ahora es interactivo
         ) {
             Row(
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(

@@ -1,15 +1,16 @@
 package com.market.paresolvershop
 
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.transitions.SlideTransition
+import com.market.paresolvershop.di.addressModule
 import com.market.paresolvershop.di.authModule
 import com.market.paresolvershop.di.cartModule
 import com.market.paresolvershop.di.checkoutModule
 import com.market.paresolvershop.di.orderModule
 import com.market.paresolvershop.di.platformModule
 import com.market.paresolvershop.di.productModule
+import com.market.paresolvershop.di.storeConfigModule
 import com.market.paresolvershop.di.supabaseModule
 import com.market.paresolvershop.ui.navigation.bottombar.BottomBarScreen
 import com.market.paresolvershop.ui.theme.ShopAppTheme
@@ -18,17 +19,21 @@ import org.koin.compose.KoinApplication
 @Composable
 fun App() {
     // Inicializar Koin para toda la aplicación
-    KoinApplication(application = {
-        modules(
-            authModule,
-            cartModule,
-            checkoutModule,
-            orderModule,
-            platformModule,
-            productModule,
-            supabaseModule,
-        )
-    }) {
+    KoinApplication(
+        application = {
+            modules(
+                addressModule,
+                authModule,
+                cartModule,
+                checkoutModule,
+                orderModule,
+                platformModule,
+                productModule,
+                storeConfigModule,
+                supabaseModule,
+            )
+        }
+    ) {
         // Tema de Material Design
         ShopAppTheme {
             Navigator(screen = BottomBarScreen()) { navigator ->

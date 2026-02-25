@@ -26,6 +26,7 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import coil3.compose.AsyncImage
 import com.market.paresolvershop.domain.model.CartItem
 import com.market.paresolvershop.domain.model.Product
+import com.market.paresolvershop.domain.model.StoreConfig
 import com.market.paresolvershop.ui.components.ScrollIndicator
 import com.market.paresolvershop.ui.components.formatPrice
 import com.market.paresolvershop.ui.theme.*
@@ -36,6 +37,7 @@ import compose.icons.fontawesomeicons.solid.Plus
 import compose.icons.fontawesomeicons.solid.ShoppingCart
 import compose.icons.fontawesomeicons.solid.Trash
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,6 +45,7 @@ fun CartScreen(cartViewModel: CartViewModel, onCheckout: () -> Unit) {
     val uiState by cartViewModel.uiState.collectAsState()
     val navigator = LocalNavigator.currentOrThrow
     val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
     val listState = rememberLazyListState()
     val showScrollIndicator by remember { derivedStateOf { listState.canScrollForward } }
@@ -62,13 +65,7 @@ fun CartScreen(cartViewModel: CartViewModel, onCheckout: () -> Unit) {
     if (showClearCartDialog) {
         AlertDialog(
             onDismissRequest = { showClearCartDialog = false },
-            title = {
-                Text(
-                    "Vaciar Carrito",
-                    fontFamily = SpaceGrotesk,
-                    fontWeight = FontWeight.Bold
-                )
-            },
+            title = { Text("Vaciar Carrito", fontFamily = SpaceGrotesk, fontWeight = FontWeight.Bold) },
             text = { Text("¿Estás seguro de que deseas eliminar todos los productos del carrito?") },
             confirmButton = {
                 Button(
@@ -77,9 +74,7 @@ fun CartScreen(cartViewModel: CartViewModel, onCheckout: () -> Unit) {
                         showClearCartDialog = false
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Error)
-                ) {
-                    Text("Vaciar")
-                }
+                ) { Text("Vaciar") }
             },
             dismissButton = {
                 TextButton(onClick = { showClearCartDialog = false }) {
@@ -92,13 +87,7 @@ fun CartScreen(cartViewModel: CartViewModel, onCheckout: () -> Unit) {
     if (itemToRemove != null) {
         AlertDialog(
             onDismissRequest = { itemToRemove = null },
-            title = {
-                Text(
-                    "Eliminar Producto",
-                    fontFamily = SpaceGrotesk,
-                    fontWeight = FontWeight.Bold
-                )
-            },
+            title = { Text("Eliminar Producto", fontFamily = SpaceGrotesk, fontWeight = FontWeight.Bold) },
             text = { Text("¿Deseas eliminar '${itemToRemove!!.name}' del carrito?") },
             confirmButton = {
                 Button(
@@ -107,9 +96,7 @@ fun CartScreen(cartViewModel: CartViewModel, onCheckout: () -> Unit) {
                         itemToRemove = null
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Error)
-                ) {
-                    Text("Eliminar")
-                }
+                ) { Text("Eliminar") }
             },
             dismissButton = {
                 TextButton(onClick = { itemToRemove = null }) {
@@ -123,27 +110,15 @@ fun CartScreen(cartViewModel: CartViewModel, onCheckout: () -> Unit) {
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             CenterAlignedTopAppBar(
-                title = {
-                    Text(
-                        "My Cart",
-                        fontFamily = SpaceGrotesk,
-                        fontWeight = FontWeight.Bold
-                    )
-                },
+                title = { Text("My Cart", fontFamily = SpaceGrotesk, fontWeight = FontWeight.Bold) },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
                 actions = {
                     if (uiState.items.isNotEmpty()) {
                         IconButton(
                             onClick = { showClearCartDialog = true },
-                            modifier = Modifier.padding(end = 8.dp)
-                                .background(Error.copy(alpha = 0.1f), CircleShape)
+                            modifier = Modifier.padding(end = 8.dp).background(Error.copy(alpha = 0.1f), CircleShape)
                         ) {
-                            Icon(
-                                FontAwesomeIcons.Solid.Trash,
-                                contentDescription = "Vaciar",
-                                tint = Error,
-                                modifier = Modifier.size(18.dp)
-                            )
+                            Icon(FontAwesomeIcons.Solid.Trash, "Vaciar", tint = Error, modifier = Modifier.size(18.dp))
                         }
                     }
                 }
@@ -168,6 +143,7 @@ fun CartScreen(cartViewModel: CartViewModel, onCheckout: () -> Unit) {
                             items(uiState.items) { item ->
                                 CartListItem(
                                     item = item,
+                                    currencySymbol = uiState.config?.currencySymbol ?: "$",
                                     onQuantityChange = { newQuantity ->
                                         cartViewModel.updateQuantity(item.product.id, newQuantity)
                                     },
@@ -177,14 +153,19 @@ fun CartScreen(cartViewModel: CartViewModel, onCheckout: () -> Unit) {
                         }
                         ScrollIndicator(
                             visible = showScrollIndicator,
-                            text = "More items",
-                            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 8.dp)
+                            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 8.dp),
+                            onClick = {
+                                scope.launch {
+                                    listState.animateScrollToItem(uiState.items.size - 1)
+                                }
+                            }
                         )
                     }
 
                     CartSummarySection(
                         subtotal = uiState.subtotal,
                         isValid = uiState.isValid,
+                        config = uiState.config,
                         onCheckout = onCheckout
                     )
                 }
@@ -194,7 +175,7 @@ fun CartScreen(cartViewModel: CartViewModel, onCheckout: () -> Unit) {
 }
 
 @Composable
-fun CartListItem(item: CartItem, onQuantityChange: (Int) -> Unit, onRemove: () -> Unit) {
+fun CartListItem(item: CartItem, currencySymbol: String, onQuantityChange: (Int) -> Unit, onRemove: () -> Unit) {
     val isOutOfStock = item.quantity > item.product.stock
 
     Surface(
@@ -207,7 +188,6 @@ fun CartListItem(item: CartItem, onQuantityChange: (Int) -> Unit, onRemove: () -
             modifier = Modifier.fillMaxWidth().padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Imagen del producto
             Box(
                 modifier = Modifier.size(85.dp).clip(RoundedCornerShape(16.dp))
                     .background(SurfaceVariant.copy(alpha = 0.5f)).padding(8.dp)
@@ -222,7 +202,6 @@ fun CartListItem(item: CartItem, onQuantityChange: (Int) -> Unit, onRemove: () -
 
             Spacer(Modifier.width(16.dp))
 
-            // Info del producto
             Column(modifier = Modifier.weight(1f)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -238,36 +217,23 @@ fun CartListItem(item: CartItem, onQuantityChange: (Int) -> Unit, onRemove: () -
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f)
                     )
-
-                    // Botón de eliminar mejorado
                     IconButton(
                         onClick = onRemove,
-                        modifier = Modifier.size(32.dp)
-                            .background(Error.copy(alpha = 0.08f), CircleShape)
+                        modifier = Modifier.size(32.dp).background(Error.copy(alpha = 0.08f), CircleShape)
                     ) {
-                        Icon(
-                            FontAwesomeIcons.Solid.Trash,
-                            contentDescription = "Eliminar",
-                            tint = Error,
-                            modifier = Modifier.size(14.dp)
-                        )
+                        Icon(FontAwesomeIcons.Solid.Trash, "Eliminar", tint = Error, modifier = Modifier.size(14.dp))
                     }
                 }
 
                 Text(
-                    text = "$${item.product.price.formatPrice()} c/u",
+                    text = "$currencySymbol${item.product.price.formatPrice()} c/u",
                     color = OnSurfaceVariant,
                     fontSize = 12.sp,
                     fontFamily = Inter
                 )
 
                 if (isOutOfStock) {
-                    Text(
-                        "Solo hay ${item.product.stock} disponibles",
-                        color = Error,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Text("Solo hay ${item.product.stock} disponibles", color = Error, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 }
 
                 Spacer(Modifier.height(8.dp))
@@ -278,19 +244,13 @@ fun CartListItem(item: CartItem, onQuantityChange: (Int) -> Unit, onRemove: () -
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "$${(item.product.price * item.quantity).formatPrice()}",
+                        text = "$currencySymbol${(item.product.price * item.quantity).formatPrice()}",
                         fontFamily = SpaceGrotesk,
                         fontWeight = FontWeight.Bold,
                         fontSize = 18.sp,
                         color = if (isOutOfStock) Error else Primary
                     )
-
-                    // Selector de cantidad
-                    QuantitySelector(
-                        quantity = item.quantity,
-                        maxStock = item.product.stock,
-                        onQuantityChange = onQuantityChange
-                    )
+                    QuantitySelector(item.quantity, item.product.stock, onQuantityChange)
                 }
             }
         }
@@ -299,100 +259,69 @@ fun CartListItem(item: CartItem, onQuantityChange: (Int) -> Unit, onRemove: () -
 
 @Composable
 fun QuantitySelector(quantity: Int, maxStock: Int, onQuantityChange: (Int) -> Unit) {
-
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = SurfaceVariant.copy(alpha = 0.4f),
+        border = BorderStroke(1.dp, SoftGray.copy(alpha = 0.5f))
     ) {
-        // Botón Minus
-        Box(
-            modifier = Modifier
-                .size(28.dp)
-                .clip(CircleShape)
-                .clickable { onQuantityChange(quantity - 1) },
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                FontAwesomeIcons.Solid.Minus,
-                contentDescription = "Restar",
-                modifier = Modifier.size(10.dp),
-                tint = OnSurface
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)) {
+            Box(
+                modifier = Modifier.size(28.dp).clip(CircleShape).clickable { onQuantityChange(quantity - 1) },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(FontAwesomeIcons.Solid.Minus, "Restar", modifier = Modifier.size(10.dp), tint = OnSurface)
+            }
+            Text(
+                text = quantity.toString(),
+                fontFamily = SpaceGrotesk,
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp,
+                modifier = Modifier.padding(horizontal = 12.dp)
             )
-        }
-
-        Text(
-            text = quantity.toString(),
-            fontFamily = SpaceGrotesk,
-            fontWeight = FontWeight.Bold,
-            fontSize = 14.sp,
-            modifier = Modifier.padding(horizontal = 12.dp)
-        )
-
-        // Botón Plus
-        val canAdd = quantity < maxStock
-        Box(
-            modifier = Modifier
-                .size(28.dp)
-                .clip(CircleShape)
-                .background(if (canAdd) Primary else SoftGray.copy(alpha = 0.3f))
-                .clickable(enabled = canAdd) { onQuantityChange(quantity + 1) },
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                FontAwesomeIcons.Solid.Plus,
-                contentDescription = "Añadir",
-                modifier = Modifier.size(10.dp),
-                tint = Color.White
-            )
+            val canAdd = quantity < maxStock
+            Box(
+                modifier = Modifier.size(28.dp).clip(CircleShape)
+                    .background(if (canAdd) Primary else SoftGray.copy(alpha = 0.3f))
+                    .clickable(enabled = canAdd) { onQuantityChange(quantity + 1) },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(FontAwesomeIcons.Solid.Plus, "Añadir", modifier = Modifier.size(10.dp), tint = Color.White)
+            }
         }
     }
 }
 
 @Composable
-fun CartSummarySection(subtotal: Double, isValid: Boolean, onCheckout: () -> Unit) {
+fun CartSummarySection(subtotal: Double, isValid: Boolean, config: StoreConfig?, onCheckout: () -> Unit) {
+    val currency = config?.currencySymbol ?: "$"
+    val shipping = config?.shippingFee ?: 0.0
+    val tax = config?.taxFee ?: 0.0
+    val total = subtotal + shipping + tax
+
     Column(modifier = Modifier.padding(vertical = 16.dp)) {
         HorizontalDivider(color = SurfaceVariant, modifier = Modifier.padding(bottom = 16.dp))
-
-        SummaryRow("Subtotal", "$${subtotal.formatPrice()}")
-        SummaryRow("Envío", "$10.00")
-        SummaryRow("Impuestos", "$3.00")
-
+        
+        SummaryRow("Subtotal", "$currency${subtotal.formatPrice()}")
+        SummaryRow("Envío", "$currency${shipping.formatPrice()}")
+        SummaryRow("Impuestos", "$currency${tax.formatPrice()}")
+        
         Spacer(Modifier.height(12.dp))
-
+        
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(
-                "Total a pagar",
-                fontFamily = Inter,
-                fontWeight = FontWeight.Bold,
-                fontSize = 18.sp
-            )
-            Text(
-                "$${(subtotal + 13).formatPrice()}",
-                fontFamily = SpaceGrotesk,
-                fontWeight = FontWeight.Bold,
-                fontSize = 22.sp,
-                color = OnSurface
-            )
+            Text("Total a pagar", fontFamily = Inter, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            Text("$currency${total.formatPrice()}", fontFamily = SpaceGrotesk, fontWeight = FontWeight.Bold, fontSize = 22.sp, color = OnSurface)
         }
 
         Spacer(Modifier.height(24.dp))
 
         Button(
             onClick = onCheckout,
-            enabled = isValid,
+            enabled = isValid && config != null,
             modifier = Modifier.fillMaxWidth().height(56.dp),
             shape = RoundedCornerShape(16.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = OnSurface,
-                disabledContainerColor = SoftGray
-            )
+            colors = ButtonDefaults.buttonColors(containerColor = OnSurface, disabledContainerColor = SoftGray)
         ) {
-            Text(
-                "Finalizar Compra",
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp,
-                fontFamily = SpaceGrotesk
-            )
+            Text("Finalizar Compra", fontWeight = FontWeight.Bold, fontSize = 16.sp, fontFamily = SpaceGrotesk)
         }
         Spacer(Modifier.height(8.dp))
     }
@@ -400,10 +329,7 @@ fun CartSummarySection(subtotal: Double, isValid: Boolean, onCheckout: () -> Uni
 
 @Composable
 fun SummaryRow(label: String, value: String) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
+    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp), horizontalArrangement = Arrangement.SpaceBetween) {
         Text(label, color = OnSurfaceVariant, fontSize = 14.sp, fontFamily = Inter)
         Text(value, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, fontFamily = Inter)
     }
@@ -416,24 +342,10 @@ fun EmptyCartView() {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Icon(
-            FontAwesomeIcons.Solid.ShoppingCart,
-            null,
-            modifier = Modifier.size(80.dp),
-            tint = SoftGray.copy(alpha = 0.5f)
-        )
+        Icon(FontAwesomeIcons.Solid.ShoppingCart, null, modifier = Modifier.size(80.dp), tint = SoftGray.copy(alpha = 0.5f))
         Spacer(Modifier.height(16.dp))
-        Text(
-            "Tu carrito está vacío",
-            fontFamily = SpaceGrotesk,
-            fontSize = 18.sp,
-            color = OnSurfaceVariant
-        )
-        Text(
-            "¡Añade algunos productos para comenzar!",
-            fontSize = 14.sp,
-            color = OnSurfaceVariant.copy(alpha = 0.7f)
-        )
+        Text("Tu carrito está vacío", fontFamily = SpaceGrotesk, fontSize = 18.sp, color = OnSurfaceVariant)
+        Text("¡Añade algunos productos para comenzar!", fontSize = 14.sp, color = OnSurfaceVariant.copy(alpha = 0.7f))
     }
 }
 
@@ -448,11 +360,7 @@ fun StockWarningView() {
         Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(
                 "⚠️ Algunos productos exceden el stock disponible. Por favor, ajusta las cantidades.",
-                color = Error,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Medium,
-                textAlign = TextAlign.Center,
-                lineHeight = 16.sp
+                color = Error, fontSize = 12.sp, fontWeight = FontWeight.Medium, textAlign = TextAlign.Center, lineHeight = 16.sp
             )
         }
     }

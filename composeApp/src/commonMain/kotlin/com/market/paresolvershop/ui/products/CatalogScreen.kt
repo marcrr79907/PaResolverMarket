@@ -370,7 +370,7 @@ fun ProductGridItem(
                     maxLines = 1
                 )
                 Text(
-                    product.category,
+                    product.categoryName ?: "Sin categoría",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

@@ -9,6 +9,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.screen.Screen
@@ -21,7 +22,7 @@ import compose.icons.FontAwesomeIcons
 import compose.icons.fontawesomeicons.Solid
 import compose.icons.fontawesomeicons.solid.CheckCircle
 
-object CheckoutSummaryScreen : Screen {
+data class CheckoutSummaryScreen(val orderId: String) : Screen {
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
@@ -49,30 +50,41 @@ object CheckoutSummaryScreen : Screen {
             Spacer(Modifier.height(24.dp))
             
             Text(
-                text = "Order Placed Successfully!", 
+                text = "¡Pedido Realizado!", 
                 fontFamily = SpaceGrotesk, 
                 fontWeight = FontWeight.Bold, 
-                fontSize = 22.sp
+                fontSize = 24.sp
+            )
+
+            Spacer(Modifier.height(8.dp))
+
+            Text(
+                text = "ID: #${orderId.take(8).uppercase()}",
+                fontFamily = Inter,
+                fontWeight = FontWeight.Medium,
+                color = Primary
             )
             
             Text(
-                text = "Your order has been received and is being processed. You can track it in 'My Orders'.",
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                text = "Hemos recibido tu pedido y lo estamos procesando. Puedes seguir su estado en 'Mis Pedidos'.",
+                textAlign = TextAlign.Center,
                 color = OnSurfaceVariant,
-                modifier = Modifier.padding(top = 12.dp)
+                modifier = Modifier.padding(top = 16.dp, start = 20.dp, end = 20.dp),
+                lineHeight = 20.sp
             )
             
-            Spacer(Modifier.height(40.dp))
+            Spacer(Modifier.height(48.dp))
             
             Button(
                 onClick = {
+                    // Volvemos al inicio, específicamente a la pestaña de pedidos
                     navigator.replaceAll(BottomBarScreen(OrderTab))
                 },
                 modifier = Modifier.fillMaxWidth().height(56.dp),
                 shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Primary)
+                colors = ButtonDefaults.buttonColors(containerColor = OnSurface)
             ) {
-                Text("Back to Home", fontWeight = FontWeight.Bold)
+                Text("Ver mis pedidos", fontWeight = FontWeight.Bold, fontFamily = SpaceGrotesk)
             }
         }
     }

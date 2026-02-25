@@ -11,7 +11,6 @@ import io.github.jan.supabase.auth.providers.builtin.IDToken
 import io.github.jan.supabase.auth.status.SessionStatus
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.postgrest
-import io.github.jan.supabase.postgrest.rpc
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -29,7 +28,7 @@ data class UserProfile(
     val id: String,
     val email: String,
     val name: String,
-    val role: String = "customer"
+    val role: String
 )
 
 class AuthRepositoryImpl(
@@ -52,7 +51,7 @@ class AuthRepositoryImpl(
                                 val profile = fetchProfileFromDb(user.id)
                                 _currentUser.value = profile
                             } catch (e: Exception) {
-                                // Error silencioso en inicialización
+                                // Error silencioso en el init para evitar loops de UI
                             }
                         }
                     }
@@ -84,41 +83,17 @@ class AuthRepositoryImpl(
             if (attempt < 2) delay(1000)
         }
 
-        if (profile == null) {
-            throw Exception("ProfileNotFound: ${lastError ?: "No se encontró la fila en public.users"}")
-        }
-
-        val isAdmin = checkIsAdmin()
-
-        return AuthUserEntity(
-            id = profile!!.id,
-            email = profile!!.email,
-            name = profile!!.name,
-            role = if (isAdmin) "admin" else profile!!.role
-        )
+        return profile?.let {
+            AuthUserEntity(
+                id = it.id,
+                email = it.email,
+                name = it.name,
+                role = it.role
+            )
+        } ?: throw Exception(lastError ?: "Perfil de usuario no encontrado en la tabla 'users'.")
     }
 
     override fun getCurrentUser(): AuthUserEntity? = _currentUser.value
-
-    override suspend fun getAllUsers(): DataResult<List<AuthUserEntity>> {
-        return try {
-            val entities = supabase.from("users")
-                .select()
-                .decodeList<UserProfile>()
-
-            val users = entities.map { profile ->
-                AuthUserEntity(
-                    id = profile.id,
-                    email = profile.email,
-                    name = profile.name,
-                    role = profile.role
-                )
-            }
-            DataResult.Success(users)
-        } catch (e: Exception) {
-            DataResult.Error("Error al cargar usuarios.")
-        }
-    }
 
     override suspend fun signInWithEmailAndPassword(email: String, password: String): DataResult<AuthUserEntity> {
         return try {
@@ -127,7 +102,7 @@ class AuthRepositoryImpl(
                 this.password = password
             }
 
-            val user = supabase.auth.currentUserOrNull() ?: error("Error de sesión")
+            val user = supabase.auth.currentUserOrNull() ?: error("Error en la sesión de Supabase")
             val profile = fetchProfileFromDb(user.id)
 
             _currentUser.value = profile
@@ -145,7 +120,7 @@ class AuthRepositoryImpl(
                 provider = Google
             }
 
-            val user = supabase.auth.currentUserOrNull() ?: throw Exception("Google Auth Error")
+            val user = supabase.auth.currentUserOrNull() ?: throw Exception("Error al autenticar con Google.")
             val profile = fetchProfileFromDb(user.id)
 
             _currentUser.value = profile
@@ -167,8 +142,7 @@ class AuthRepositoryImpl(
 
             val user = supabase.auth.currentUserOrNull()
             if (user == null || user.identities.isNullOrEmpty()) {
-                // Usuario creado pero requiere confirmar email
-                return DataResult.Success(AuthUserEntity(user?.id ?: "", email, name, "customer"))
+                return DataResult.Success(AuthUserEntity("", email, name, "customer"))
             }
 
             val profile = fetchProfileFromDb(user.id)
@@ -184,27 +158,27 @@ class AuthRepositoryImpl(
         _currentUser.value = null
     }
 
-    suspend fun checkIsAdmin(): Boolean = try {
-        val result = supabase.postgrest.rpc("is_admin")
-        result.decodeAs<Boolean>()
-    } catch (e: Exception) {
-        false
+    override suspend fun deleteAccount(): DataResult<Unit> {
+        return try {
+            supabase.postgrest.rpc("delete_user_account")
+            signOut()
+            DataResult.Success(Unit)
+        } catch (e: Exception) {
+            DataResult.Error(e.message ?: "Fallo al ejecutar borrado en servidor.")
+        }
     }
 
     private fun mapAuthError(e: Exception): String {
         val message = e.message ?: ""
         return when {
-            message.contains("invalid_credentials", true) || message.contains("Invalid login credentials", true) -> 
-                "Email o contraseña incorrectos."
-            message.contains("Email not confirmed", true) -> 
-                "Por favor, confirma tu cuenta en tu correo electrónico."
-            message.contains("ProfileNotFound", true) -> 
-                "Error de sincronización: No se encontró tu perfil. Inténtalo de nuevo en unos segundos."
-            message.contains("already registered", true) -> 
-                "Este correo electrónico ya está registrado."
-            message.contains("network", true) -> 
-                "Sin conexión a internet."
-            else -> "Error: ${e.message ?: "Ocurrió un error inesperado."}"
+            message.contains("invalid_credentials", true) -> "Email o contraseña incorrectos."
+            message.contains("Email not confirmed", true) -> "Confirma tu cuenta en tu email."
+            message.contains("rate_limit", true) -> "Demasiados intentos. Espera un poco."
+            message.contains("already registered", true) -> "Este email ya existe."
+            message.contains("network", true) -> "Sin conexión a internet."
+            // Si el error es de RLS o perfil faltante, lo mostramos tal cual para depurar
+            message.contains("Perfil de usuario no encontrado", true) -> message
+            else -> "Error: $message" // Cambiado de "Error inesperado" a mostrar el mensaje real
         }
     }
 }

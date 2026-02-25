@@ -1,29 +1,19 @@
 package com.market.paresolvershop.ui.admin
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import com.market.paresolvershop.ui.theme.SpaceGrotesk
 import compose.icons.FontAwesomeIcons
 import compose.icons.fontawesomeicons.Solid
 import compose.icons.fontawesomeicons.solid.ArrowLeft
+import androidx.compose.ui.text.font.FontWeight
 
 object AdminScreen : Screen {
 
@@ -34,36 +24,60 @@ object AdminScreen : Screen {
 
         Scaffold(
             topBar = {
-                TopAppBar(
-                    title = { Text("Panel de Administrador") },
+                CenterAlignedTopAppBar(
+                    title = { Text("Panel de Administrador", fontFamily = SpaceGrotesk, fontWeight = FontWeight.Bold) },
                     navigationIcon = {
                         IconButton(onClick = { navigator.pop() }) {
-                            Icon(FontAwesomeIcons.Solid.ArrowLeft, contentDescription = "Volver")
+                            Icon(FontAwesomeIcons.Solid.ArrowLeft, contentDescription = "Volver", modifier = Modifier.size(20.dp))
                         }
                     }
                 )
             }
-        ) {
+        ) { padding ->
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(it)
-                    .padding(16.dp),
+                    .padding(padding)
+                    .padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Text("Gestión de Negocio", style = MaterialTheme.typography.titleLarge)
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Button(onClick = { navigator.push(InventoryScreen) }, modifier = Modifier.fillMaxWidth()) {
+                Text("Gestión de Inventario", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                
+                Button(
+                    onClick = { navigator.push(InventoryScreen) }, 
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
                     Text("Gestionar Productos e Inventario")
                 }
                 
-                Button(onClick = { navigator.push(CategoryManagementScreen) }, modifier = Modifier.fillMaxWidth()) {
+                Button(
+                    onClick = { navigator.push(CategoryManagementScreen) }, 
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
                     Text("Gestionar Categorías")
                 }
 
-                Button(onClick = { navigator.push(OrderManagementScreen) }, modifier = Modifier.fillMaxWidth()) {
+                Spacer(Modifier.height(8.dp))
+                Text("Operaciones", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+
+                Button(
+                    onClick = { navigator.push(OrderManagementScreen) }, 
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
                     Text("Gestionar Órdenes")
+                }
+
+                // NUEVO: Atajo a la configuración de la tienda
+                Button(
+                    onClick = { navigator.push(StoreManagementScreen) }, 
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+                ) {
+                    Text("Ajustes de Tienda (Tasas y Nombre)")
                 }
             }
         }
