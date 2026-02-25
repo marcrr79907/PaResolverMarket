@@ -10,8 +10,6 @@ interface AuthRepository {
 
     fun getCurrentUser(): AuthUserEntity?
 
-    suspend fun getAllUsers(): DataResult<List<AuthUserEntity>>
-
     suspend fun signInWithEmailAndPassword(email: String, password: String): DataResult<AuthUserEntity>
 
     suspend fun signInWithGoogle(idToken: String, nonce: String?): DataResult<AuthUserEntity>
