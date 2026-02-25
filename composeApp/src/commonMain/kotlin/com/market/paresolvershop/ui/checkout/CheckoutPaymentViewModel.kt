@@ -6,34 +6,58 @@ import com.market.paresolvershop.domain.model.CartItem
 import com.market.paresolvershop.domain.model.DataResult
 import com.market.paresolvershop.domain.model.Order
 import com.market.paresolvershop.domain.model.UserAddress
+import com.market.paresolvershop.domain.model.StoreConfig
 import com.market.paresolvershop.domain.orders.PlaceOrderUseCase
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import com.market.paresolvershop.domain.store.GetStoreConfigUseCase
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
-sealed interface CheckoutPaymentUiState {
-    data object Idle : CheckoutPaymentUiState
-    data object Loading : CheckoutPaymentUiState
-    data class Success(val orderId: String) : CheckoutPaymentUiState
-    data class Error(val message: String) : CheckoutPaymentUiState
+data class CheckoutPaymentUiState(
+    val status: CheckoutStatus = CheckoutStatus.Idle,
+    val config: StoreConfig? = null
+)
+
+sealed interface CheckoutStatus {
+    data object Idle : CheckoutStatus
+    data object Loading : CheckoutStatus
+    data class Success(val orderId: String) : CheckoutStatus
+    data class Error(val message: String) : CheckoutStatus
 }
 
 class CheckoutPaymentViewModel(
-    private val placeOrderUseCase: PlaceOrderUseCase
+    private val placeOrderUseCase: PlaceOrderUseCase,
+    private val getStoreConfigUseCase: GetStoreConfigUseCase
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow<CheckoutPaymentUiState>(CheckoutPaymentUiState.Idle)
-    val uiState = _uiState.asStateFlow()
+    private val _status = MutableStateFlow<CheckoutStatus>(CheckoutStatus.Idle)
+
+    val uiState: StateFlow<CheckoutPaymentUiState> = combine(
+        _status,
+        getStoreConfigUseCase.storeConfig
+    ) { status, config ->
+        CheckoutPaymentUiState(status = status, config = config)
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = CheckoutPaymentUiState()
+    )
+
+    init {
+        viewModelScope.launch {
+            getStoreConfigUseCase()
+        }
+    }
 
     fun placeOrder(address: UserAddress, items: List<CartItem>, paymentMethod: String) {
         viewModelScope.launch {
-            _uiState.value = CheckoutPaymentUiState.Loading
+            _status.value = CheckoutStatus.Loading
             
+            val config = uiState.value.config ?: StoreConfig()
             val userId = address.userId ?: ""
             val addressId = address.id ?: ""
-            // Nota: El cálculo del total debería idealmente ser validado en el dominio (UseCase)
+
             val subtotal = items.sumOf { it.product.price * it.quantity }
-            val totalAmount = subtotal + 13.0 
+            val totalAmount = subtotal + config.shippingFee + config.taxFee
 
             val order = Order(
                 userId = userId,
@@ -42,14 +66,12 @@ class CheckoutPaymentViewModel(
                 paymentMethod = paymentMethod
             )
 
-            // CORRECCIÓN: Pasamos 'items' (List<CartItem>) directamente. 
-            // El UseCase se encarga del mapeo a OrderItem y de limpiar el carrito.
             when (val result = placeOrderUseCase(order, items)) {
                 is DataResult.Success -> {
-                    _uiState.value = CheckoutPaymentUiState.Success(result.data)
+                    _status.value = CheckoutStatus.Success(result.data)
                 }
                 is DataResult.Error -> {
-                    _uiState.value = CheckoutPaymentUiState.Error(result.message)
+                    _status.value = CheckoutStatus.Error(result.message)
                 }
             }
         }

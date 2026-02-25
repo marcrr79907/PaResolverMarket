@@ -27,7 +27,6 @@ import com.market.paresolvershop.domain.model.CartItem
 import com.market.paresolvershop.domain.model.UserAddress
 import com.market.paresolvershop.ui.components.ScrollIndicator
 import com.market.paresolvershop.ui.components.formatPrice
-import com.market.paresolvershop.ui.checkout.CheckoutSummaryScreen
 import com.market.paresolvershop.ui.theme.*
 import compose.icons.FontAwesomeIcons
 import compose.icons.fontawesomeicons.Solid
@@ -45,19 +44,23 @@ data class CheckoutPaymentScreen(
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
         val viewModel = koinViewModel<CheckoutPaymentViewModel>()
-        val state by viewModel.uiState.collectAsState()
+        val uiState by viewModel.uiState.collectAsState()
         
         var paymentMethod by remember { mutableStateOf("Cash") }
         val subtotal = cartItems.sumOf { it.product.price * it.quantity }
-        val shippingFee = 13.0
-        val total = subtotal + shippingFee
+        
+        val config = uiState.config
+        val currency = config?.currencySymbol ?: "$"
+        val shipping = config?.shippingFee ?: 0.0
+        val tax = config?.taxFee ?: 0.0
+        val total = subtotal + shipping + tax
 
         val listState = rememberLazyListState()
         val showScrollIndicator by remember { derivedStateOf { listState.canScrollForward } }
 
-        LaunchedEffect(state) {
-            if (state is CheckoutPaymentUiState.Success) {
-                navigator.replaceAll(CheckoutSummaryScreen((state as CheckoutPaymentUiState.Success).orderId))
+        LaunchedEffect(uiState.status) {
+            if (uiState.status is CheckoutStatus.Success) {
+                navigator.replaceAll(CheckoutSummaryScreen((uiState.status as CheckoutStatus.Success).orderId))
             }
         }
 
@@ -89,8 +92,9 @@ data class CheckoutPaymentScreen(
                             .padding(horizontal = 24.dp, vertical = 20.dp)
                             .navigationBarsPadding()
                     ) {
-                        CostSummaryRow("Subtotal", "$${subtotal.formatPrice()}")
-                        CostSummaryRow("Envío y Tasas", "$${shippingFee.formatPrice()}")
+                        CostSummaryRow("Subtotal", "$currency${subtotal.formatPrice()}")
+                        CostSummaryRow("Envío", "$currency${shipping.formatPrice()}")
+                        CostSummaryRow("Impuestos", "$currency${tax.formatPrice()}")
                         HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = SoftGray.copy(alpha = 0.5f))
                         Row(
                             modifier = Modifier.fillMaxWidth(), 
@@ -98,19 +102,19 @@ data class CheckoutPaymentScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text("Total a pagar", style = Typography.titleMedium, fontFamily = Inter, fontWeight = FontWeight.Bold)
-                            Text("$${total.formatPrice()}", style = Typography.headlineMedium, fontFamily = SpaceGrotesk, color = Primary, fontWeight = FontWeight.Bold)
+                            Text("$currency${total.formatPrice()}", style = Typography.headlineMedium, fontFamily = SpaceGrotesk, color = Primary, fontWeight = FontWeight.Bold)
                         }
 
                         Spacer(Modifier.height(20.dp))
 
-                        if (state is CheckoutPaymentUiState.Error) {
+                        if (uiState.status is CheckoutStatus.Error) {
                             Surface(
                                 color = Error.copy(alpha = 0.1f),
                                 shape = RoundedCornerShape(8.dp),
                                 modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
                             ) {
                                 Text(
-                                    (state as CheckoutPaymentUiState.Error).message, 
+                                    (uiState.status as CheckoutStatus.Error).message, 
                                     color = Error,
                                     modifier = Modifier.padding(12.dp),
                                     style = Typography.bodySmall,
@@ -122,12 +126,12 @@ data class CheckoutPaymentScreen(
                         Button(
                             onClick = { viewModel.placeOrder(selectedAddress, cartItems, paymentMethod) },
                             modifier = Modifier.fillMaxWidth().height(56.dp),
-                            shape = MaterialTheme.shapes.medium,
+                            shape = RoundedCornerShape(16.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = OnSurface),
-                            enabled = state !is CheckoutPaymentUiState.Loading
+                            enabled = uiState.status !is CheckoutStatus.Loading && config != null
                         ) {
-                            if (state is CheckoutPaymentUiState.Loading) {
-                                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = SurfaceVariant, strokeWidth = 2.dp)
+                            if (uiState.status is CheckoutStatus.Loading) {
+                                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White, strokeWidth = 2.dp)
                             } else {
                                 Text("Confirmar Pedido", style = Typography.bodyLarge, fontWeight = FontWeight.Bold, color = Color.White)
                             }
@@ -177,7 +181,7 @@ data class CheckoutPaymentScreen(
                         contentPadding = PaddingValues(bottom = 16.dp)
                     ) {
                         items(cartItems) { item ->
-                            CheckoutItemRow(item)
+                            CheckoutItemRow(item, currency)
                         }
                     }
 
@@ -211,14 +215,14 @@ data class CheckoutPaymentScreen(
 }
 
 @Composable
-fun CheckoutItemRow(item: CartItem) {
+fun CheckoutItemRow(item: CartItem, currency: String) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Surface(
-            modifier = Modifier.size(54.dp),
-            shape = MaterialTheme.shapes.small,
+            modifier = Modifier.size(60.dp),
+            shape = RoundedCornerShape(12.dp),
             color = SurfaceVariant.copy(alpha = 0.3f)
         ) {
             AsyncImage(
@@ -233,7 +237,7 @@ fun CheckoutItemRow(item: CartItem) {
             Text("Cantidad: ${item.quantity}", style = Typography.bodySmall, color = OnSurfaceVariant)
         }
         Text(
-            "$${(item.product.price * item.quantity).formatPrice()}",
+            "$currency${(item.product.price * item.quantity).formatPrice()}",
             style = Typography.bodyLarge,
             fontFamily = SpaceGrotesk,
             fontWeight = FontWeight.Bold,
