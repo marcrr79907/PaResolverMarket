@@ -18,7 +18,6 @@ class StoreConfigRepositoryImpl(
 
     override suspend fun fetchStoreConfig(): DataResult<Unit> {
         return try {
-            // Buscamos la configuración principal (id = 'main_config')
             val result = supabase.from("store_config").select {
                 filter { eq("id", "main_config") }
             }.decodeSingleOrNull<StoreConfig>()
@@ -27,22 +26,30 @@ class StoreConfigRepositoryImpl(
                 _storeConfig.value = result
                 DataResult.Success(Unit)
             } else {
-                DataResult.Error("No se encontró la configuración de la tienda")
+                DataResult.Error("No se encontró la configuración inicial.")
             }
         } catch (e: Exception) {
-            DataResult.Error(e.message ?: "Error al obtener la configuración")
+            DataResult.Error("Error de red: ${e.message}")
         }
     }
 
     override suspend fun updateStoreConfig(config: StoreConfig): DataResult<Unit> {
         return try {
-            supabase.from("store_config").update(config) {
+            // Importante: Al usar update, Supabase devuelve las filas afectadas.
+            // Si no devuelve nada, es porque la política RLS bloqueó la operación.
+            val result = supabase.from("store_config").update(config) {
                 filter { eq("id", "main_config") }
+                select() 
+            }.decodeSingleOrNull<StoreConfig>()
+
+            if (result != null) {
+                _storeConfig.value = result
+                DataResult.Success(Unit)
+            } else {
+                DataResult.Error("No se pudo guardar. Verifica tus permisos de administrador en Supabase (RLS).")
             }
-            _storeConfig.value = config
-            DataResult.Success(Unit)
         } catch (e: Exception) {
-            DataResult.Error(e.message ?: "Error al actualizar la configuración")
+            DataResult.Error("Fallo al persistir en servidor: ${e.message}")
         }
     }
 }

@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -25,6 +27,7 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import coil3.compose.AsyncImage
 import com.market.paresolvershop.domain.model.Category
 import com.market.paresolvershop.domain.model.Product
+import com.market.paresolvershop.domain.model.StoreConfig
 import com.market.paresolvershop.ui.authentication.LoginScreen
 import com.market.paresolvershop.ui.authentication.RegisterScreen
 import com.market.paresolvershop.ui.cart.CartEvent
@@ -37,15 +40,11 @@ import com.market.paresolvershop.ui.search.SearchScreen
 import com.market.paresolvershop.ui.theme.Primary
 import com.market.paresolvershop.ui.theme.SpaceGrotesk
 import com.market.paresolvershop.ui.theme.SurfaceVariant
+import com.market.paresolvershop.ui.theme.Inter
 import compose.icons.FontAwesomeIcons
 import compose.icons.fontawesomeicons.Solid
-import compose.icons.fontawesomeicons.solid.Bell
-import compose.icons.fontawesomeicons.solid.Heart
-import compose.icons.fontawesomeicons.solid.Plus
-import compose.icons.fontawesomeicons.solid.Search
-import compose.icons.fontawesomeicons.solid.ShoppingCart
+import compose.icons.fontawesomeicons.solid.*
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.annotation.KoinExperimentalAPI
 
@@ -61,7 +60,6 @@ object CatalogScreen : Screen {
         val uiState by viewModel.uiState.collectAsState()
         val profileState by profileViewModel.uiState.collectAsState()
         val snackbarHostState = remember { SnackbarHostState() }
-        val scope = rememberCoroutineScope()
         
         var showLoginPrompt by remember { mutableStateOf(false) }
 
@@ -104,6 +102,7 @@ object CatalogScreen : Screen {
                         userName = userName,
                         products = state.products,
                         categories = state.categories,
+                        config = state.config,
                         selectedCategoryId = state.selectedCategoryId,
                         onCategorySelect = { viewModel.selectCategory(it) },
                         onProductClick = { productId ->
@@ -139,6 +138,7 @@ fun CatalogGridContent(
     userName: String,
     products: List<Product>,
     categories: List<Category>,
+    config: StoreConfig?,
     selectedCategoryId: String?,
     onCategorySelect: (String?) -> Unit,
     onProductClick: (String) -> Unit,
@@ -150,7 +150,7 @@ fun CatalogGridContent(
         contentPadding = PaddingValues(bottom = 16.dp)
     ) {
         item { HeaderSection(userName, onSearchClick) }
-        item { PromoBanner() }
+        item { PromoBannerCarousel(config) }
         item { 
             CategoriesSection(
                 categories = categories,
@@ -205,6 +205,65 @@ fun CatalogGridContent(
 }
 
 @Composable
+fun PromoBannerCarousel(config: StoreConfig?) {
+    val pagerState = rememberPagerState(pageCount = { 1 }) 
+    
+    HorizontalPager(
+        state = pagerState,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(170.dp)
+            .padding(top = 8.dp),
+        contentPadding = PaddingValues(horizontal = 20.dp),
+        pageSpacing = 12.dp
+    ) { page ->
+        Card(
+            modifier = Modifier.fillMaxSize(),
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(containerColor = Primary)
+        ) {
+            Row(modifier = Modifier.fillMaxSize().padding(24.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Bienvenido a",
+                        color = Color.White.copy(alpha = 0.8f),
+                        fontSize = 12.sp,
+                        fontFamily = Inter
+                    )
+                    Text(
+                        text = config?.storeName ?: "Nuestra Tienda",
+                        color = Color.White,
+                        fontFamily = SpaceGrotesk,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 22.sp,
+                        lineHeight = 26.sp
+                    )
+                    Text(
+                        text = "Explora los mejores productos seleccionados para ti.",
+                        color = Color.White.copy(alpha = 0.9f),
+                        fontSize = 11.sp,
+                        modifier = Modifier.padding(top = 8.dp),
+                        lineHeight = 16.sp
+                    )
+                }
+                
+                Box(
+                    modifier = Modifier.size(70.dp).background(Color.White.copy(alpha = 0.15f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        FontAwesomeIcons.Solid.Store,
+                        null,
+                        tint = Color.White,
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
 fun CategoriesSection(
     categories: List<Category>,
     selectedCategoryId: String?,
@@ -251,7 +310,7 @@ fun HeaderSection(name: String, onSearchClick: () -> Unit) {
     ) {
         Column {
             Text(
-                "Bienvenido de nuevo",
+                "Hola,",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -280,45 +339,6 @@ fun HeaderIcon(icon: ImageVector, onClick: () -> Unit) {
     ) {
         Box(contentAlignment = Alignment.Center) {
             Icon(imageVector = icon, contentDescription = null, modifier = Modifier.size(20.dp))
-        }
-    }
-}
-
-@Composable
-fun PromoBanner() {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(160.dp)
-            .padding(horizontal = 20.dp),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = Primary)
-    ) {
-        Row(modifier = Modifier.fillMaxSize().padding(20.dp)) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    "Nueva Colección",
-                    color = Color.White,
-                    fontFamily = SpaceGrotesk,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp
-                )
-                Text(
-                    "Descuento 50% para\nrecomendados",
-                    color = Color.White.copy(alpha = 0.8f),
-                    fontSize = 13.sp,
-                    modifier = Modifier.padding(vertical = 8.dp)
-                )
-                Button(
-                    onClick = {},
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.White),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
-                    modifier = Modifier.height(32.dp),
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Text("Comprar ahora", color = Primary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                }
-            }
         }
     }
 }
@@ -406,4 +426,3 @@ fun ProductGridItem(
         }
     }
 }
-
