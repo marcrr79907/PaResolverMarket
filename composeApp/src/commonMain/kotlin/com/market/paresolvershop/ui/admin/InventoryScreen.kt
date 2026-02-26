@@ -1,23 +1,32 @@
 package com.market.paresolvershop.ui.admin
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import coil3.compose.AsyncImage
 import com.market.paresolvershop.domain.model.Product
+import com.market.paresolvershop.ui.components.formatPrice
+import com.market.paresolvershop.ui.theme.*
 import compose.icons.FontAwesomeIcons
 import compose.icons.fontawesomeicons.Solid
-import compose.icons.fontawesomeicons.solid.ArrowLeft
-import compose.icons.fontawesomeicons.solid.Plus
+import compose.icons.fontawesomeicons.solid.*
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.annotation.KoinExperimentalAPI
 
@@ -30,14 +39,14 @@ object InventoryScreen : Screen {
         val uiState by viewModel.uiState.collectAsState()
         val deleteState by viewModel.deleteState.collectAsState()
 
+        var query by remember { mutableStateOf("") }
         var showDeleteDialog by remember { mutableStateOf<Product?>(null) }
-
         val snackbarHostState = remember { SnackbarHostState() }
 
         LaunchedEffect(deleteState) {
             when (val state = deleteState) {
                 is DeleteProductState.Success -> {
-                    snackbarHostState.showSnackbar("Producto eliminado con éxito.")
+                    snackbarHostState.showSnackbar("Producto eliminado.")
                     viewModel.resetDeleteState()
                 }
                 is DeleteProductState.Error -> {
@@ -48,72 +57,87 @@ object InventoryScreen : Screen {
             }
         }
 
-        showDeleteDialog?.let {
+        if (showDeleteDialog != null) {
             DeleteConfirmationDialog(
-                productName = it.name,
-                onConfirm = { viewModel.deleteProduct(it) },
+                productName = showDeleteDialog!!.name,
+                onConfirm = { 
+                    viewModel.deleteProduct(showDeleteDialog!!)
+                    showDeleteDialog = null
+                },
                 onDismiss = { showDeleteDialog = null }
             )
         }
 
         Scaffold(
+            snackbarHost = { SnackbarHost(snackbarHostState) },
             topBar = {
-                TopAppBar(
-                    title = { Text("Inventario de Productos") },
-                    navigationIcon = {
-                        IconButton(onClick = { navigator.pop() }) {
-                            Icon(FontAwesomeIcons.Solid.ArrowLeft, contentDescription = "Volver")
+                Column(modifier = Modifier.background(MaterialTheme.colorScheme.surface)) {
+                    CenterAlignedTopAppBar(
+                        title = { Text("Gestión de Inventario", fontFamily = SpaceGrotesk, fontWeight = FontWeight.Bold) },
+                        navigationIcon = {
+                            IconButton(onClick = { navigator.pop() }) {
+                                Icon(FontAwesomeIcons.Solid.ArrowLeft, null)
+                            }
+                        },
+                        actions = {
+                            IconButton(onClick = { navigator.push(CreateProductScreen) }) {
+                                Icon(FontAwesomeIcons.Solid.Plus, null, tint = Primary)
+                            }
                         }
-                    }
-                )
-            },
-            floatingActionButton = {
-                 FloatingActionButton(onClick = { navigator.push(CreateProductScreen) }) {
-                     Icon(
-                        FontAwesomeIcons.Solid.Plus,
-                        contentDescription = "Añadir Producto",
-                        modifier = Modifier.size(22.dp)
+                    )
+                    // Barra de búsqueda integrada profesional
+                    OutlinedTextField(
+                        value = query,
+                        onValueChange = { query = it },
+                        placeholder = { Text("Buscar por nombre o ID...", fontSize = 14.sp) },
+                        modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp,bottom = 12.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        leadingIcon = { Icon(FontAwesomeIcons.Solid.Search, null, modifier = Modifier.size(18.dp)) },
+                        trailingIcon = {
+                            if (query.isNotEmpty()) {
+                                IconButton(onClick = { query = "" }) {
+                                    Icon(FontAwesomeIcons.Solid.TimesCircle, null, modifier = Modifier.size(18.dp))
+                                }
+                            }
+                        },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            unfocusedBorderColor = SurfaceVariant,
+                            focusedBorderColor = Primary
+                        )
                     )
                 }
-            },
-            snackbarHost = { SnackbarHost(snackbarHostState) }
-        ) { paddingValues ->
-            Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+            }
+        ) { padding ->
+            Box(modifier = Modifier.fillMaxSize().padding(padding).background(Background)) {
                 when (val state = uiState) {
-                    is InventoryUiState.Loading -> {
-                        CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-                    }
+                    is InventoryUiState.Loading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
+                    is InventoryUiState.Error -> Text(state.message, color = Error, modifier = Modifier.align(Alignment.Center))
                     is InventoryUiState.Success -> {
-                        if (state.products.isEmpty()) {
-                            Text(
-                                "No hay productos disponibles.",
-                                modifier = Modifier.align(Alignment.Center)
-                            )
+                        val filteredProducts = if (query.isEmpty()) state.products 
+                                              else state.products.filter { it.name.contains(query, ignoreCase = true) || it.id.contains(query) }
+
+                        if (filteredProducts.isEmpty()) {
+                            Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(FontAwesomeIcons.Solid.BoxOpen, null, Modifier.size(64.dp), tint = SoftGray)
+                                Text("No se encontraron productos", color = OnSurfaceVariant)
+                            }
                         } else {
                             LazyColumn(
                                 modifier = Modifier.fillMaxSize(),
-                                contentPadding = PaddingValues(16.dp)
+                                contentPadding = PaddingValues(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                items(state.products) { product ->
-                                    AdminProductCard(
+                                items(filteredProducts) { product ->
+                                    InventoryProductCard(
                                         product = product,
-                                        onEditClick = { navigator.push(EditProductScreen(product)) },
-                                        onDeleteClick = { showDeleteDialog = product }
+                                        onEdit = { navigator.push(EditProductScreen(product)) },
+                                        onDelete = { showDeleteDialog = product }
                                     )
                                 }
                             }
                         }
                     }
-                    is InventoryUiState.Error -> {
-                        Text(
-                            text = state.message,
-                            color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.align(Alignment.Center)
-                        )
-                    }
-                }
-                if (deleteState is DeleteProductState.Loading) {
-                     CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                 }
             }
         }
@@ -121,69 +145,61 @@ object InventoryScreen : Screen {
 }
 
 @Composable
-fun AdminProductCard(
-    product: Product,
-    onEditClick: () -> Unit,
-    onDeleteClick: () -> Unit
-) {
+fun InventoryProductCard(product: Product, onEdit: () -> Unit, onDelete: () -> Unit) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp)
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                AsyncImage(
-                    model = product.imageUrl,
-                    contentDescription = "Imagen de ${product.name}",
-                    modifier = Modifier
-                        .size(60.dp)
-                        .padding(end = 16.dp),
-                    contentScale = ContentScale.Crop
-                )
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(product.name, style = MaterialTheme.typography.titleMedium)
-                    Text("Precio: $${product.price}", style = MaterialTheme.typography.bodyMedium)
-                    Text("Stock: ${product.stock}", style = MaterialTheme.typography.bodySmall)
+        Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            AsyncImage(
+                model = product.imageUrl,
+                contentDescription = null,
+                modifier = Modifier.size(70.dp).clip(RoundedCornerShape(12.dp)).background(SurfaceVariant),
+                contentScale = ContentScale.Crop
+            )
+            Spacer(Modifier.width(16.dp))
+            Column(Modifier.weight(1f)) {
+                Text(product.name, fontWeight = FontWeight.Bold, maxLines = 1)
+                Text(product.categoryName ?: "Sin categoría", fontSize = 12.sp, color = OnSurfaceVariant)
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
+                    val stockColor = if (product.stock < 5) Error else Color(0xFF4CAF50)
+                    Box(Modifier.size(8.dp).background(stockColor, CircleShape))
+                    Text(" Stock: ${product.stock}", fontSize = 12.sp, color = stockColor, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.width(12.dp))
+                    Text("$${product.price.formatPrice()}", fontSize = 14.sp, color = Primary, fontWeight = FontWeight.ExtraBold)
                 }
             }
-            Spacer(modifier = Modifier.height(16.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                TextButton(onClick = onEditClick) {
-                    Text("Editar")
-                }
-                Spacer(modifier = Modifier.width(8.dp))
-                TextButton(onClick = onDeleteClick, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) {
-                    Text("Eliminar")
-                }
+            Row {
+                IconButton(onClick = onEdit) { Icon(FontAwesomeIcons.Solid.Edit, null, tint = Primary, modifier = Modifier.size(20.dp)) }
+                IconButton(onClick = onDelete) { Icon(FontAwesomeIcons.Solid.Trash, null, tint = Error, modifier = Modifier.size(20.dp)) }
             }
         }
     }
 }
 
 @Composable
-fun DeleteConfirmationDialog(productName: String, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+fun DeleteConfirmationDialog(
+    productName: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Confirmar Eliminación") },
-        text = { Text("¿Estás seguro de que quieres eliminar el producto '$productName'? Esta acción no se puede deshacer.") },
+        title = { Text("¿Eliminar producto?", fontFamily = SpaceGrotesk, fontWeight = FontWeight.Bold) },
+        text = { Text("¿Estás seguro de que quieres eliminar '$productName'? El producto se archivará pero seguirá visible en los pedidos antiguos.") },
         confirmButton = {
-            Button(onClick = { 
-                onConfirm()
-                onDismiss()
-             }) {
-                Text("Eliminar")
+            Button(
+                onClick = onConfirm,
+                colors = ButtonDefaults.buttonColors(containerColor = Error)
+            ) {
+                Text("Eliminar", color = Color.White)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancelar")
+                Text("Cancelar", color = OnSurfaceVariant)
             }
         }
     )
