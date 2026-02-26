@@ -31,6 +31,7 @@ import com.market.paresolvershop.ui.theme.*
 import compose.icons.FontAwesomeIcons
 import compose.icons.fontawesomeicons.Solid
 import compose.icons.fontawesomeicons.solid.*
+import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.annotation.KoinExperimentalAPI
 
@@ -45,6 +46,7 @@ data class CheckoutPaymentScreen(
         val navigator = LocalNavigator.currentOrThrow
         val viewModel = koinViewModel<CheckoutPaymentViewModel>()
         val uiState by viewModel.uiState.collectAsState()
+        val scope = rememberCoroutineScope()
         
         var paymentMethod by remember { mutableStateOf("Cash") }
         val subtotal = cartItems.sumOf { it.product.price * it.quantity }
@@ -187,8 +189,13 @@ data class CheckoutPaymentScreen(
 
                     ScrollIndicator(
                         visible = showScrollIndicator,
-                        text = "Desliza para ver más",
-                        modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 8.dp)
+                        text = "Ver más",
+                        modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 8.dp),
+                        onClick = {
+                            scope.launch {
+                                listState.animateScrollToItem(cartItems.size - 1)
+                            }
+                        }
                     )
                 }
 

@@ -66,7 +66,7 @@ fun CartScreen(cartViewModel: CartViewModel, onCheckout: () -> Unit) {
         AlertDialog(
             onDismissRequest = { showClearCartDialog = false },
             title = { Text("Vaciar Carrito", fontFamily = SpaceGrotesk, fontWeight = FontWeight.Bold) },
-            text = { Text("¿Estás seguro de que deseas eliminar todos los productos del carrito?") },
+            text = { Text("¿Estás seguro de que deseas eliminar todos los productos?") },
             confirmButton = {
                 Button(
                     onClick = {
@@ -153,6 +153,7 @@ fun CartScreen(cartViewModel: CartViewModel, onCheckout: () -> Unit) {
                         }
                         ScrollIndicator(
                             visible = showScrollIndicator,
+                            text = "Más productos",
                             modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 8.dp),
                             onClick = {
                                 scope.launch {
