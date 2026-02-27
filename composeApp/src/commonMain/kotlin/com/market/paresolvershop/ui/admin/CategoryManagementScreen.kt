@@ -19,17 +19,23 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import com.market.paresolvershop.domain.model.Category
 import com.market.paresolvershop.domain.model.DataResult
+import com.market.paresolvershop.ui.admin.components.AdminScaffold
 import com.market.paresolvershop.ui.theme.Background
 import com.market.paresolvershop.ui.theme.Primary
 import com.market.paresolvershop.ui.theme.SpaceGrotesk
 import compose.icons.FontAwesomeIcons
 import compose.icons.fontawesomeicons.Solid
-import compose.icons.fontawesomeicons.solid.ArrowLeft
 import compose.icons.fontawesomeicons.solid.Edit
 import compose.icons.fontawesomeicons.solid.Plus
 import compose.icons.fontawesomeicons.solid.Trash
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.annotation.KoinExperimentalAPI
+
+sealed class CategoryAction {
+    data object Create : CategoryAction()
+    data class Edit(val category: Category) : CategoryAction()
+    data class Delete(val category: Category) : CategoryAction()
+}
 
 object CategoryManagementScreen : Screen {
     @OptIn(KoinExperimentalAPI::class, ExperimentalMaterial3Api::class)
@@ -117,34 +123,13 @@ object CategoryManagementScreen : Screen {
             }
         }
 
-        Scaffold(
-            topBar = {
-                CenterAlignedTopAppBar(
-                    title = { Text("Gestionar Categorías", fontFamily = SpaceGrotesk, fontWeight = FontWeight.Bold) },
-                    navigationIcon = {
-                        IconButton(onClick = { navigator.pop() }) {
-                            Icon(FontAwesomeIcons.Solid.ArrowLeft, contentDescription = "Volver")
-                        }
-                    }
-                )
-            },
-            floatingActionButton = {
-                FloatingActionButton(
-                    onClick = { showDialog = CategoryAction.Create },
-                    containerColor = Primary,
-                    contentColor = Color.White,
-                    shape = CircleShape
-                ) {
-                    Icon(
-                        imageVector = FontAwesomeIcons.Solid.Plus, 
-                        contentDescription = "Añadir",
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-            },
-            snackbarHost = { SnackbarHost(snackbarHostState) }
+        AdminScaffold(
+            title = "Gestionar Categorías",
+            currentScreen = CategoryManagementScreen
         ) { padding ->
             Box(modifier = Modifier.fillMaxSize().padding(padding).background(Background)) {
+                SnackbarHost(hostState = snackbarHostState, modifier = Modifier.align(Alignment.BottomCenter))
+
                 when (val state = uiState) {
                     is CategoryUiState.Loading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = Primary)
                     is CategoryUiState.Success -> {
@@ -167,6 +152,20 @@ object CategoryManagementScreen : Screen {
                         }
                     }
                     is CategoryUiState.Error -> Text(state.message, color = MaterialTheme.colorScheme.error, modifier = Modifier.align(Alignment.Center))
+                }
+
+                FloatingActionButton(
+                    onClick = { showDialog = CategoryAction.Create },
+                    containerColor = Primary,
+                    contentColor = Color.White,
+                    shape = CircleShape,
+                    modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)
+                ) {
+                    Icon(
+                        imageVector = FontAwesomeIcons.Solid.Plus, 
+                        contentDescription = "Añadir",
+                        modifier = Modifier.size(24.dp)
+                    )
                 }
             }
         }
@@ -218,10 +217,4 @@ fun EmptyState(modifier: Modifier = Modifier) {
         Text("No hay categorías", style = MaterialTheme.typography.titleMedium, color = Color.Gray)
         Text("Pulsa + para añadir la primera", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
     }
-}
-
-sealed class CategoryAction {
-    data object Create : CategoryAction()
-    data class Edit(val category: Category) : CategoryAction()
-    data class Delete(val category: Category) : CategoryAction()
 }

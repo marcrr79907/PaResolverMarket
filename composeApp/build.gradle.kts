@@ -98,12 +98,8 @@ kotlin {
                 implementation(libs.ktor.client.darwin)
             }
         }
-        val iosArm64Main by getting {
-            dependsOn(iosMain)
-        }
-        val iosSimulatorArm64Main by getting {
-            dependsOn(iosMain)
-        }
+        val iosArm64Main by getting { dependsOn(iosMain) }
+        val iosSimulatorArm64Main by getting { dependsOn(iosMain) }
 
         commonTest.dependencies {
             implementation(libs.kotlin.test)
@@ -114,6 +110,23 @@ kotlin {
 android {
     namespace = "com.market.paresolvershop"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
+
+    // 1. Leer propiedades de firma desde local.properties por seguridad
+    val localProperties = Properties()
+    val localPropertiesFile = project.rootProject.file("local.properties")
+    if (localPropertiesFile.exists()) {
+        localPropertiesFile.inputStream().use { localProperties.load(it) }
+    }
+
+    signingConfigs {
+        create("release") {
+            // Estos valores se buscan en local.properties
+            storeFile = file(localProperties.getProperty("signing.storeFile") ?: "keystore.jks")
+            storePassword = localProperties.getProperty("signing.storePassword") ?: ""
+            keyAlias = localProperties.getProperty("signing.keyAlias") ?: ""
+            keyPassword = localProperties.getProperty("signing.keyPassword") ?: ""
+        }
+    }
 
     defaultConfig {
         applicationId = "com.market.paresolvershop"
@@ -140,6 +153,26 @@ android {
         
         resValue("string", "web_client_id", webClientId)
     }
+
+    buildTypes {
+        getByName("release") {
+            // 2. Habilitar optimización y reducción de tamaño (R8)
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+            
+            // 3. Vincular la firma de release
+            signingConfig = signingConfigs.getByName("release")
+        }
+        
+        getByName("debug") {
+            signingConfig = signingConfigs.getByName("debug")
+        }
+    }
+
     buildFeatures {
         buildConfig = true
     }
@@ -149,11 +182,7 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
-    buildTypes {
-        getByName("release") {
-            isMinifyEnabled = false
-        }
-    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
@@ -163,4 +192,3 @@ android {
 dependencies {
     debugImplementation(compose.uiTooling)
 }
-

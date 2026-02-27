@@ -3,7 +3,6 @@ package com.market.paresolvershop.ui.admin
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -19,10 +18,10 @@ import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import com.market.paresolvershop.ui.admin.components.AdminScaffold
 import com.market.paresolvershop.ui.theme.*
 import compose.icons.FontAwesomeIcons
 import compose.icons.fontawesomeicons.Solid
-import compose.icons.fontawesomeicons.solid.ArrowLeft
 import compose.icons.fontawesomeicons.solid.Save
 import kotlinx.coroutines.flow.collectLatest
 import org.koin.compose.viewmodel.koinViewModel
@@ -64,26 +63,32 @@ object StoreManagementScreen : Screen {
             }
         }
 
-        Scaffold(
-            snackbarHost = { SnackbarHost(snackbarHostState) },
-            topBar = {
-                CenterAlignedTopAppBar(
-                    title = { Text("Ajustes de Tienda", fontFamily = SpaceGrotesk, fontWeight = FontWeight.Bold) },
-                    navigationIcon = {
-                        IconButton(
-                            onClick = { navigator.pop() },
-                            modifier = Modifier.padding(start = 12.dp).background(SurfaceVariant.copy(alpha = 0.5f), CircleShape)
-                        ) {
-                            Icon(FontAwesomeIcons.Solid.ArrowLeft, contentDescription = "Back", modifier = Modifier.size(18.dp))
-                        }
-                    }
-                )
-            }
+        AdminScaffold(
+            title = "Ajustes de Tienda",
+            currentScreen = StoreManagementScreen
         ) { paddingValues ->
-            Box(modifier = Modifier.fillMaxSize().padding(paddingValues).background(MaterialTheme.colorScheme.background)) {
+            Box(
+                modifier = Modifier.fillMaxSize().padding(paddingValues)
+                    .background(MaterialTheme.colorScheme.background)
+            ) {
+                SnackbarHost(
+                    hostState = snackbarHostState,
+                    modifier = Modifier.align(Alignment.BottomCenter)
+                )
+
                 when (val state = uiState) {
-                    is StoreManagementUiState.Loading -> CircularProgressIndicator(Modifier.align(Alignment.Center), color = Primary)
-                    is StoreManagementUiState.Error -> Text(state.message, color = Error, modifier = Modifier.align(Alignment.Center))
+                    is StoreManagementUiState.Loading -> CircularProgressIndicator(
+                        Modifier.align(
+                            Alignment.Center
+                        ), color = Primary
+                    )
+
+                    is StoreManagementUiState.Error -> Text(
+                        state.message,
+                        color = Error,
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+
                     is StoreManagementUiState.Success -> {
                         Column(
                             modifier = Modifier
@@ -92,8 +97,12 @@ object StoreManagementScreen : Screen {
                                 .verticalScroll(rememberScrollState()),
                             verticalArrangement = Arrangement.spacedBy(20.dp)
                         ) {
-                            Text("Configuración General", style = Typography.titleMedium, color = Primary)
-                            
+                            Text(
+                                "Configuración General",
+                                style = Typography.titleMedium,
+                                color = Primary
+                            )
+
                             OutlinedTextField(
                                 value = storeName,
                                 onValueChange = { storeName = it },
@@ -102,7 +111,10 @@ object StoreManagementScreen : Screen {
                                 shape = RoundedCornerShape(12.dp)
                             )
 
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
                                 OutlinedTextField(
                                     value = shippingFee,
                                     onValueChange = { shippingFee = it },
@@ -132,12 +144,23 @@ object StoreManagementScreen : Screen {
                             Spacer(Modifier.height(32.dp))
 
                             Button(
-                                onClick = { viewModel.updateConfig(storeName, shippingFee, taxFee, currency) },
+                                onClick = {
+                                    viewModel.updateConfig(
+                                        storeName,
+                                        shippingFee,
+                                        taxFee,
+                                        currency
+                                    )
+                                },
                                 modifier = Modifier.fillMaxWidth().height(56.dp),
                                 shape = RoundedCornerShape(16.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = OnSurface)
                             ) {
-                                Icon(FontAwesomeIcons.Solid.Save, null, modifier = Modifier.size(18.dp))
+                                Icon(
+                                    FontAwesomeIcons.Solid.Save,
+                                    null,
+                                    modifier = Modifier.size(18.dp)
+                                )
                                 Spacer(Modifier.width(8.dp))
                                 Text("Guardar Cambios", fontWeight = FontWeight.Bold)
                             }

@@ -5,7 +5,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -16,12 +15,10 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import com.market.paresolvershop.domain.model.Order
+import com.market.paresolvershop.ui.admin.components.AdminScaffold
 import com.market.paresolvershop.ui.orders.OrderDetailScreen
 import com.market.paresolvershop.ui.orders.components.OrderCard
 import com.market.paresolvershop.ui.theme.*
-import compose.icons.FontAwesomeIcons
-import compose.icons.fontawesomeicons.Solid
-import compose.icons.fontawesomeicons.solid.ArrowLeft
 import kotlinx.coroutines.flow.collectLatest
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.annotation.KoinExperimentalAPI
@@ -58,23 +55,13 @@ object OrderManagementScreen : Screen {
             )
         }
 
-        Scaffold(
-            snackbarHost = { SnackbarHost(snackbarHostState) },
-            topBar = {
-                CenterAlignedTopAppBar(
-                    title = { Text("Gestión de Pedidos", fontFamily = SpaceGrotesk, fontWeight = FontWeight.Bold) },
-                    navigationIcon = {
-                        IconButton(
-                            onClick = { navigator.pop() },
-                            modifier = Modifier.padding(start = 12.dp).background(SurfaceVariant.copy(alpha = 0.5f), CircleShape)
-                        ) {
-                            Icon(FontAwesomeIcons.Solid.ArrowLeft, contentDescription = "Back", modifier = Modifier.size(18.dp))
-                        }
-                    }
-                )
-            }
+        AdminScaffold(
+            title = "Gestión de Pedidos",
+            currentScreen = OrderManagementScreen
         ) { paddingValues ->
             Box(modifier = Modifier.fillMaxSize().padding(paddingValues).background(MaterialTheme.colorScheme.background)) {
+                SnackbarHost(hostState = snackbarHostState, modifier = Modifier.align(Alignment.BottomCenter))
+                
                 when (val state = uiState) {
                     is OrderManagementUiState.Loading -> CircularProgressIndicator(Modifier.align(Alignment.Center), color = Primary)
                     is OrderManagementUiState.Error -> Text(state.message, color = Error, modifier = Modifier.align(Alignment.Center))
@@ -91,7 +78,7 @@ object OrderManagementScreen : Screen {
                                 items(state.orders) { order ->
                                     OrderCard(
                                         order = order,
-                                        isAdmin = true, // Siempre true en este panel
+                                        isAdmin = true,
                                         onClick = { 
                                             order.id?.let { id ->
                                                 navigator.push(OrderDetailScreen(id))

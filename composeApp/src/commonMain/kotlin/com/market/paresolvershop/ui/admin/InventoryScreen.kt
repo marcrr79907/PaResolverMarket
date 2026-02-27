@@ -1,7 +1,6 @@
 package com.market.paresolvershop.ui.admin
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -22,6 +21,7 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import coil3.compose.AsyncImage
 import com.market.paresolvershop.domain.model.Product
+import com.market.paresolvershop.ui.admin.components.AdminScaffold
 import com.market.paresolvershop.ui.components.formatPrice
 import com.market.paresolvershop.ui.theme.*
 import compose.icons.FontAwesomeIcons
@@ -68,45 +68,28 @@ object InventoryScreen : Screen {
             )
         }
 
-        Scaffold(
-            snackbarHost = { SnackbarHost(snackbarHostState) },
-            topBar = {
-                Column(modifier = Modifier.background(MaterialTheme.colorScheme.surface)) {
-                    CenterAlignedTopAppBar(
-                        title = { Text("Gestión de Inventario", fontFamily = SpaceGrotesk, fontWeight = FontWeight.Bold) },
-                        navigationIcon = {
-                            IconButton(onClick = { navigator.pop() }) {
-                                Icon(FontAwesomeIcons.Solid.ArrowLeft, null)
-                            }
-                        },
-                        actions = {
-                            IconButton(onClick = { navigator.push(CreateProductScreen) }) {
-                                Icon(FontAwesomeIcons.Solid.Plus, null, tint = Primary)
-                            }
-                        }
-                    )
-                    // Barra de búsqueda integrada profesional
-                    OutlinedTextField(
-                        value = query,
-                        onValueChange = { query = it },
-                        placeholder = { Text("Buscar por nombre o ID...", fontSize = 14.sp) },
-                        modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp,bottom = 12.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        leadingIcon = { Icon(FontAwesomeIcons.Solid.Search, null, modifier = Modifier.size(18.dp)) },
-                        trailingIcon = {
-                            if (query.isNotEmpty()) {
-                                IconButton(onClick = { query = "" }) {
-                                    Icon(FontAwesomeIcons.Solid.TimesCircle, null, modifier = Modifier.size(18.dp))
-                                }
-                            }
-                        },
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            unfocusedBorderColor = SurfaceVariant,
-                            focusedBorderColor = Primary
-                        )
-                    )
+        AdminScaffold(
+            title = "Gestión de Inventario",
+            currentScreen = InventoryScreen,
+            actions = {
+                IconButton(onClick = { navigator.push(CreateProductScreen) }) {
+                    Icon(FontAwesomeIcons.Solid.Plus, null, tint = Primary, modifier = Modifier.size(20.dp))
                 }
+            },
+            extraHeader = {
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    placeholder = { Text("Buscar por nombre o ID...", fontSize = 14.sp) },
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 12.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    leadingIcon = { Icon(FontAwesomeIcons.Solid.Search, null, modifier = Modifier.size(18.dp)) },
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        unfocusedBorderColor = SurfaceVariant,
+                        focusedBorderColor = Primary
+                    )
+                )
             }
         ) { padding ->
             Box(modifier = Modifier.fillMaxSize().padding(padding).background(Background)) {
