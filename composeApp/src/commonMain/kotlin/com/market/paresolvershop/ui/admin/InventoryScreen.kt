@@ -1,8 +1,10 @@
 package com.market.paresolvershop.ui.admin
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -20,6 +22,7 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import coil3.compose.AsyncImage
+import com.market.paresolvershop.domain.model.Category
 import com.market.paresolvershop.domain.model.Product
 import com.market.paresolvershop.ui.admin.components.AdminScaffold
 import com.market.paresolvershop.ui.components.formatPrice
@@ -38,9 +41,13 @@ object InventoryScreen : Screen {
         val viewModel = koinViewModel<InventoryViewModel>()
         val uiState by viewModel.uiState.collectAsState()
         val deleteState by viewModel.deleteState.collectAsState()
+        val searchQuery by viewModel.searchQuery.collectAsState()
+        val selectedCategoryId by viewModel.selectedCategoryId.collectAsState()
+        val sortType by viewModel.sortType.collectAsState()
+        val isAscending by viewModel.isAscending.collectAsState()
 
-        var query by remember { mutableStateOf("") }
         var showDeleteDialog by remember { mutableStateOf<Product?>(null) }
+        var showSortMenu by remember { mutableStateOf(false) }
         val snackbarHostState = remember { SnackbarHostState() }
 
         LaunchedEffect(deleteState) {
@@ -72,24 +79,90 @@ object InventoryScreen : Screen {
             title = "Gestión de Inventario",
             currentScreen = InventoryScreen,
             actions = {
+                Box {
+                    IconButton(onClick = { showSortMenu = true }) {
+                        Icon(
+                            imageVector = if (isAscending) FontAwesomeIcons.Solid.SortAmountUp else FontAwesomeIcons.Solid.SortAmountDown,
+                            contentDescription = "Ordenar",
+                            tint = Primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = showSortMenu,
+                        onDismissRequest = { showSortMenu = false },
+                        modifier = Modifier.background(Color.White)
+                    ) {
+                        SortMenuItem(
+                            label = "Nombre",
+                            isSelected = sortType == InventorySortType.NAME,
+                            isAscending = isAscending,
+                            onClick = { viewModel.toggleSort(InventorySortType.NAME); showSortMenu = false }
+                        )
+                        SortMenuItem(
+                            label = "Precio",
+                            isSelected = sortType == InventorySortType.PRICE,
+                            isAscending = isAscending,
+                            onClick = { viewModel.toggleSort(InventorySortType.PRICE); showSortMenu = false }
+                        )
+                        SortMenuItem(
+                            label = "Stock",
+                            isSelected = sortType == InventorySortType.STOCK,
+                            isAscending = isAscending,
+                            onClick = { viewModel.toggleSort(InventorySortType.STOCK); showSortMenu = false }
+                        )
+                    }
+                }
                 IconButton(onClick = { navigator.push(CreateProductScreen) }) {
                     Icon(FontAwesomeIcons.Solid.Plus, null, tint = Primary, modifier = Modifier.size(20.dp))
                 }
             },
             extraHeader = {
-                OutlinedTextField(
-                    value = query,
-                    onValueChange = { query = it },
-                    placeholder = { Text("Buscar por nombre o ID...", fontSize = 14.sp) },
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 12.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    leadingIcon = { Icon(FontAwesomeIcons.Solid.Search, null, modifier = Modifier.size(18.dp)) },
-                    singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        unfocusedBorderColor = SurfaceVariant,
-                        focusedBorderColor = Primary
+                Column(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { viewModel.updateSearchQuery(it) },
+                        placeholder = { Text("Buscar producto...", fontSize = 14.sp) },
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        leadingIcon = { Icon(FontAwesomeIcons.Solid.Search, null, modifier = Modifier.size(18.dp)) },
+                        trailingIcon = {
+                            if (searchQuery.isNotEmpty()) {
+                                IconButton(onClick = { viewModel.updateSearchQuery("") }) {
+                                    Icon(FontAwesomeIcons.Solid.Times, null, modifier = Modifier.size(16.dp))
+                                }
+                            }
+                        },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            unfocusedBorderColor = SurfaceVariant,
+                            focusedBorderColor = Primary
+                        )
                     )
-                )
+                    
+                    if (uiState is InventoryUiState.Success) {
+                        val state = uiState as InventoryUiState.Success
+                        LazyRow(
+                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            item {
+                                FilterChip(
+                                    selected = selectedCategoryId == null,
+                                    onClick = { viewModel.selectCategory(null) },
+                                    label = { Text("Todos", fontSize = 12.sp) }
+                                )
+                            }
+                            items(state.categories) { category ->
+                                FilterChip(
+                                    selected = selectedCategoryId == category.id,
+                                    onClick = { viewModel.selectCategory(category.id) },
+                                    label = { Text(category.name, fontSize = 12.sp) }
+                                )
+                            }
+                        }
+                    }
+                }
             }
         ) { padding ->
             Box(modifier = Modifier.fillMaxSize().padding(padding).background(Background)) {
@@ -97,26 +170,36 @@ object InventoryScreen : Screen {
                     is InventoryUiState.Loading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
                     is InventoryUiState.Error -> Text(state.message, color = Error, modifier = Modifier.align(Alignment.Center))
                     is InventoryUiState.Success -> {
-                        val filteredProducts = if (query.isEmpty()) state.products 
-                                              else state.products.filter { it.name.contains(query, ignoreCase = true) || it.id.contains(query) }
-
-                        if (filteredProducts.isEmpty()) {
-                            Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
-                                Icon(FontAwesomeIcons.Solid.BoxOpen, null, Modifier.size(64.dp), tint = SoftGray)
-                                Text("No se encontraron productos", color = OnSurfaceVariant)
-                            }
-                        } else {
-                            LazyColumn(
-                                modifier = Modifier.fillMaxSize(),
-                                contentPadding = PaddingValues(16.dp),
-                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                        Column(modifier = Modifier.fillMaxSize()) {
+                            // Mini Dashboard de Inventario - Más sutil
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                items(filteredProducts) { product ->
-                                    InventoryProductCard(
-                                        product = product,
-                                        onEdit = { navigator.push(EditProductScreen(product)) },
-                                        onDelete = { showDeleteDialog = product }
-                                    )
+                                InventoryStatBadge("Total: ${state.totalProducts}", Primary)
+                                if (state.lowStockCount > 0) {
+                                    InventoryStatBadge("Bajo Stock: ${state.lowStockCount}", Error)
+                                }
+                            }
+
+                            if (state.products.isEmpty()) {
+                                Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(FontAwesomeIcons.Solid.BoxOpen, null, Modifier.size(64.dp), tint = SoftGray)
+                                    Text("No se encontraron productos", color = OnSurfaceVariant)
+                                }
+                            } else {
+                                LazyColumn(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    items(state.products) { product ->
+                                        InventoryProductCard(
+                                            product = product,
+                                            onEdit = { navigator.push(EditProductScreen(product)) },
+                                            onDelete = { showDeleteDialog = product }
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -124,6 +207,43 @@ object InventoryScreen : Screen {
                 }
             }
         }
+    }
+}
+
+@Composable
+fun SortMenuItem(label: String, isSelected: Boolean, isAscending: Boolean, onClick: () -> Unit) {
+    DropdownMenuItem(
+        text = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(label, modifier = Modifier.weight(1f))
+                if (isSelected) {
+                    Icon(
+                        imageVector = if (isAscending) FontAwesomeIcons.Solid.ArrowUp else FontAwesomeIcons.Solid.ArrowDown,
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp),
+                        tint = Primary
+                    )
+                }
+            }
+        },
+        onClick = onClick
+    )
+}
+
+@Composable
+fun InventoryStatBadge(label: String, color: Color) {
+    Surface(
+        shape = RoundedCornerShape(8.dp),
+        color = color.copy(alpha = 0.1f),
+        border = androidx.compose.foundation.BorderStroke(1.dp, color.copy(alpha = 0.2f))
+    ) {
+        Text(
+            label,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+            fontSize = 11.sp,
+            color = color,
+            fontWeight = FontWeight.Bold
+        )
     }
 }
 
@@ -136,27 +256,59 @@ fun InventoryProductCard(product: Product, onEdit: () -> Unit, onDelete: () -> U
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            AsyncImage(
-                model = product.imageUrl,
-                contentDescription = null,
-                modifier = Modifier.size(70.dp).clip(RoundedCornerShape(12.dp)).background(SurfaceVariant),
-                contentScale = ContentScale.Crop
-            )
-            Spacer(Modifier.width(16.dp))
-            Column(Modifier.weight(1f)) {
-                Text(product.name, fontWeight = FontWeight.Bold, maxLines = 1)
-                Text(product.categoryName ?: "Sin categoría", fontSize = 12.sp, color = OnSurfaceVariant)
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
-                    val stockColor = if (product.stock < 5) Error else Color(0xFF4CAF50)
-                    Box(Modifier.size(8.dp).background(stockColor, CircleShape))
-                    Text(" Stock: ${product.stock}", fontSize = 12.sp, color = stockColor, fontWeight = FontWeight.Bold)
-                    Spacer(Modifier.width(12.dp))
-                    Text("$${product.price.formatPrice()}", fontSize = 14.sp, color = Primary, fontWeight = FontWeight.ExtraBold)
+            Box {
+                AsyncImage(
+                    model = product.imageUrl,
+                    contentDescription = null,
+                    modifier = Modifier.size(80.dp).clip(RoundedCornerShape(12.dp)).background(SurfaceVariant),
+                    contentScale = ContentScale.Crop
+                )
+                if (product.stock < 5) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(4.dp)
+                            .background(Error, CircleShape)
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text("Low", color = OnPrimary, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
-            Row {
-                IconButton(onClick = onEdit) { Icon(FontAwesomeIcons.Solid.Edit, null, tint = Primary, modifier = Modifier.size(20.dp)) }
-                IconButton(onClick = onDelete) { Icon(FontAwesomeIcons.Solid.Trash, null, tint = Error, modifier = Modifier.size(20.dp)) }
+            
+            Spacer(Modifier.width(16.dp))
+            
+            Column(Modifier.weight(1f)) {
+                Text(product.name, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1)
+                Text(product.categoryName ?: "Sin categoría", fontSize = 12.sp, color = OnSurfaceVariant)
+                
+                Spacer(Modifier.height(8.dp))
+                
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "$${product.price.formatPrice()}", 
+                        fontSize = 16.sp, 
+                        color = Primary, 
+                        fontWeight = FontWeight.ExtraBold,
+                        fontFamily = SpaceGrotesk
+                    )
+                    Spacer(Modifier.weight(1f))
+                    Text(
+                        "Stock: ${product.stock}", 
+                        fontSize = 13.sp, 
+                        color = if (product.stock < 5) Error else OnSurface, 
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+            
+            Column(verticalArrangement = Arrangement.Center) {
+                IconButton(onClick = onEdit) { 
+                    Icon(FontAwesomeIcons.Solid.Edit, null, tint = Primary, modifier = Modifier.size(20.dp)) 
+                }
+                IconButton(onClick = onDelete) { 
+                    Icon(FontAwesomeIcons.Solid.Trash, null, tint = Error, modifier = Modifier.size(20.dp)) 
+                }
             }
         }
     }

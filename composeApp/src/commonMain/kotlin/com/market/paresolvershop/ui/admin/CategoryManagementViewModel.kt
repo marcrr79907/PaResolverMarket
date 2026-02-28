@@ -2,7 +2,10 @@ package com.market.paresolvershop.ui.admin
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.market.paresolvershop.data.repository.CategoryRepository
+import com.market.paresolvershop.domain.categories.CreateCategoryUseCase
+import com.market.paresolvershop.domain.categories.DeleteCategoryUseCase
+import com.market.paresolvershop.domain.categories.GetCategoriesUseCase
+import com.market.paresolvershop.domain.categories.UpdateCategoryUseCase
 import com.market.paresolvershop.domain.model.Category
 import com.market.paresolvershop.domain.model.DataResult
 import kotlinx.coroutines.flow.*
@@ -15,11 +18,17 @@ sealed interface CategoryUiState {
 }
 
 class CategoryManagementViewModel(
-    private val repository: CategoryRepository
+    private val getCategoriesUseCase: GetCategoriesUseCase,
+    private val createCategoryUseCase: CreateCategoryUseCase,
+    private val updateCategoryUseCase: UpdateCategoryUseCase,
+    private val deleteCategoryUseCase: DeleteCategoryUseCase
 ) : ViewModel() {
 
-    val uiState: StateFlow<CategoryUiState> = repository.getCategories()
-        .map<List<Category>, CategoryUiState> { CategoryUiState.Success(it) }
+    val uiState: StateFlow<CategoryUiState> = getCategoriesUseCase()
+        .map { categories -> 
+            val state: CategoryUiState = CategoryUiState.Success(categories)
+            state 
+        }
         .onStart { emit(CategoryUiState.Loading) }
         .catch { emit(CategoryUiState.Error(it.message ?: "Error desconocido")) }
         .stateIn(
@@ -32,19 +41,17 @@ class CategoryManagementViewModel(
     val actionState = _actionState.asStateFlow()
 
     fun createCategory(name: String) {
-        if (name.isBlank()) return
         viewModelScope.launch {
             _actionState.value = null
-            val result = repository.createCategory(Category(name = name))
+            val result = createCategoryUseCase(name)
             _actionState.value = result
         }
     }
 
     fun updateCategory(category: Category) {
-        if (category.name.isBlank()) return
         viewModelScope.launch {
             _actionState.value = null
-            val result = repository.updateCategory(category)
+            val result = updateCategoryUseCase(category)
             _actionState.value = result
         }
     }
@@ -52,7 +59,7 @@ class CategoryManagementViewModel(
     fun deleteCategory(id: String) {
         viewModelScope.launch {
             _actionState.value = null
-            val result = repository.deleteCategory(id)
+            val result = deleteCategoryUseCase(id)
             _actionState.value = result
         }
     }

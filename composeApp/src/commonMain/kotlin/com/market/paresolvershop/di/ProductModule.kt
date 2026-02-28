@@ -6,6 +6,10 @@ import com.market.paresolvershop.data.repository.StorageRepository
 import com.market.paresolvershop.data.repository.implementations.CategoryRepositoryImpl
 import com.market.paresolvershop.data.repository.implementations.ProductRepositoryImpl
 import com.market.paresolvershop.data.repository.implementations.StorageRepositoryImpl
+import com.market.paresolvershop.domain.categories.CreateCategoryUseCase
+import com.market.paresolvershop.domain.categories.DeleteCategoryUseCase
+import com.market.paresolvershop.domain.categories.GetCategoriesUseCase
+import com.market.paresolvershop.domain.categories.UpdateCategoryUseCase
 import com.market.paresolvershop.domain.products.CreateProductUseCase
 import com.market.paresolvershop.domain.products.DeleteProductUseCase
 import com.market.paresolvershop.domain.products.GetProductById
@@ -29,12 +33,18 @@ val productModule = module {
     singleOf(::CategoryRepositoryImpl) bind CategoryRepository::class
     singleOf(::StorageRepositoryImpl) bind StorageRepository::class
 
-    // Use Cases
+    // Use Cases - Products
     factoryOf(::GetProductById)
     factoryOf(::GetProducts)
     factoryOf(::CreateProductUseCase)
     factoryOf(::UpdateProductUseCase)
     factoryOf(::DeleteProductUseCase)
+
+    // Use Cases - Categories
+    factoryOf(::GetCategoriesUseCase)
+    factoryOf(::CreateCategoryUseCase)
+    factoryOf(::UpdateCategoryUseCase)
+    factoryOf(::DeleteCategoryUseCase)
 
     // ViewModels
     viewModelOf(::CatalogViewModel)
