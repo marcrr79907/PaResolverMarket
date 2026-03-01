@@ -19,6 +19,12 @@ val OnSurfaceVariant = Color(0xFF44474E)
 val Error = Color(0xFFBA1A1A)
 val Success = Color(0xFF2E7D32)
 
+// Colores de Estado para Órdenes
+val StatusPending = Color(0xFFF2994A)   // Naranja
+val StatusShipped = Color(0xFF2F80ED)   // Azul
+val StatusDelivered = Color(0xFF27AE60) // Verde
+val StatusCancelled = Color(0xFFEB5757) // Rojo suave
+
 // Tonos adicionales para categorías y labels
 val SoftGreen = Color(0xFFE0F2F1)
 val SoftGray = Color(0xFFECEFF1)

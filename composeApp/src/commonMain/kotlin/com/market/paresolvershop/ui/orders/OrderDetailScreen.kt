@@ -27,14 +27,11 @@ import com.market.paresolvershop.ui.navigation.bottombar.CartTab
 import com.market.paresolvershop.ui.orders.components.OrderProductItemRow
 import com.market.paresolvershop.ui.orders.components.StatusBadge
 import com.market.paresolvershop.ui.profile.AddressManagementScreen
-import com.market.paresolvershop.ui.profile.ProfileUiState
-import com.market.paresolvershop.ui.profile.ProfileViewModel
 import com.market.paresolvershop.ui.theme.*
 import compose.icons.FontAwesomeIcons
 import compose.icons.fontawesomeicons.Solid
 import compose.icons.fontawesomeicons.solid.ArrowLeft
 import compose.icons.fontawesomeicons.solid.MapMarkerAlt
-import compose.icons.fontawesomeicons.solid.UserCircle
 import kotlinx.coroutines.flow.collectLatest
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.annotation.KoinExperimentalAPI
@@ -47,13 +44,9 @@ data class OrderDetailScreen(val orderId: String) : Screen {
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
         val tabNavigator = LocalTabNavigator.current
+        
         val viewModel = koinViewModel<OrderDetailViewModel> { parametersOf(orderId) }
-        val profileViewModel = koinViewModel<ProfileViewModel>()
-        
         val uiState by viewModel.uiState.collectAsState()
-        val profileState by profileViewModel.uiState.collectAsState()
-        val isAdmin = (profileState as? ProfileUiState.Authenticated)?.isAdmin ?: false
-        
         val snackbarHostState = remember { SnackbarHostState() }
 
         LaunchedEffect(Unit) {
@@ -100,7 +93,6 @@ data class OrderDetailScreen(val orderId: String) : Screen {
                             orderId = orderId,
                             items = state.items,
                             order = state.order,
-                            isAdmin = isAdmin,
                             onAddAddressClick = { navigator.push(AddressManagementScreen()) },
                             onReOrderClick = { viewModel.reOrder(state.items) }
                         )
@@ -116,7 +108,6 @@ fun OrderDetailContent(
     orderId: String, 
     items: List<Pair<OrderItem, Product>>,
     order: com.market.paresolvershop.domain.model.Order,
-    isAdmin: Boolean,
     onAddAddressClick: () -> Unit,
     onReOrderClick: () -> Unit
 ) {
@@ -132,7 +123,7 @@ fun OrderDetailContent(
             item {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Column {
-                        Text("Order Information", fontFamily = SpaceGrotesk, fontWeight = FontWeight.Bold, fontSize = 24.sp)
+                        Text("Detalle del Pedido", fontFamily = SpaceGrotesk, fontWeight = FontWeight.Bold, fontSize = 24.sp)
                         Text(text = buildAnnotatedString {
                             withStyle(style = SpanStyle(color = Primary, fontWeight = FontWeight.Bold)) {
                                 append("ID: ")
@@ -144,24 +135,6 @@ fun OrderDetailContent(
                 }
             }
 
-            // Customer Info (Solo Admin)
-            if (isAdmin && order.customerName != null) {
-                item {
-                    Text("Customer Info", style = MaterialTheme.typography.labelLarge, color = OnSurfaceVariant)
-                    Surface(
-                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                        shape = RoundedCornerShape(16.dp),
-                        color = Color.White,
-                        shadowElevation = 2.dp
-                    ) {
-                        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Icon(FontAwesomeIcons.Solid.UserCircle, null, tint = Primary, modifier = Modifier.size(20.dp))
-                            Text(order.customerName, modifier = Modifier.padding(start = 12.dp), fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
-            }
-
             // Delivery Address Card
             item {
                 Row(
@@ -169,11 +142,9 @@ fun OrderDetailContent(
                     horizontalArrangement = Arrangement.SpaceBetween, 
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Delivery to", style = MaterialTheme.typography.labelLarge, color = OnSurfaceVariant)
-                    if (!isAdmin) {
-                        TextButton(onClick = onAddAddressClick, contentPadding = PaddingValues(0.dp)) {
-                            Text("Add new address", color = Primary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                        }
+                    Text("Entregar en", style = MaterialTheme.typography.labelLarge, color = OnSurfaceVariant)
+                    TextButton(onClick = onAddAddressClick, contentPadding = PaddingValues(0.dp)) {
+                        Text("Añadir dirección", color = Primary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
                 }
                 Surface(
@@ -193,10 +164,10 @@ fun OrderDetailContent(
                 }
             }
 
-            // Delivery Time
+            // Order Date
             item {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("Order Date", style = MaterialTheme.typography.labelLarge, color = OnSurfaceVariant)
+                    Text("Fecha del pedido", style = MaterialTheme.typography.labelLarge, color = OnSurfaceVariant)
                     Text(order.createdAt?.take(16)?.replace("T", " ") ?: "N/A", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
                 }
             }
@@ -214,7 +185,7 @@ fun OrderDetailContent(
             item {
                 Column(modifier = Modifier.padding(vertical = 12.dp)) {
                     DetailRow("Subtotal (${items.size} items)", "$$subtotal")
-                    DetailRow("Ship Fee", "$13.00")
+                    DetailRow("Envío", "$13.00")
                     Spacer(Modifier.height(8.dp))
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Text("Total", fontFamily = SpaceGrotesk, fontWeight = FontWeight.Bold, fontSize = 18.sp)
@@ -222,40 +193,20 @@ fun OrderDetailContent(
                     }
                 }
             }
-
-            // Note Section
-            item {
-                Text("Note", style = MaterialTheme.typography.labelLarge, color = OnSurfaceVariant)
-                Surface(
-                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    color = SurfaceVariant.copy(alpha = 0.3f)
-                ) {
-                    Text(
-                        "No special notes for this order.",
-                        modifier = Modifier.padding(16.dp),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = OnSurfaceVariant
-                    )
-                }
-            }
         }
 
-        // El botón Re-Order no es necesario para el admin en la gestión de otros
-        if (!isAdmin) {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shadowElevation = 8.dp,
-                color = Color.White
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shadowElevation = 8.dp,
+            color = Color.White
+        ) {
+            Button(
+                onClick = onReOrderClick,
+                modifier = Modifier.fillMaxWidth().padding(20.dp).height(56.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Primary)
             ) {
-                Button(
-                    onClick = onReOrderClick,
-                    modifier = Modifier.fillMaxWidth().padding(20.dp).height(56.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Primary)
-                ) {
-                    Text("Re-Order", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                }
+                Text("Repetir Pedido", fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -264,10 +215,10 @@ fun OrderDetailContent(
 @Composable
 fun DetailRow(label: String, value: String) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(label, color = OnSurfaceVariant, fontSize = 14.sp)
-        Text(value, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+        Text(label, style = MaterialTheme.typography.bodySmall, color = OnSurfaceVariant)
+        Text(value, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
     }
 }

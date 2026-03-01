@@ -2,6 +2,7 @@ package com.market.paresolvershop.di
 
 import com.market.paresolvershop.data.repository.OrderRepository
 import com.market.paresolvershop.data.repository.implementations.OrderRepositoryImpl
+import com.market.paresolvershop.domain.orders.GetAllOrdersAdminUseCase
 import com.market.paresolvershop.domain.orders.GetOrderDetailsUseCase
 import com.market.paresolvershop.domain.orders.GetOrderHistoryUseCase
 import com.market.paresolvershop.domain.orders.GetOrderItemsUseCase
@@ -24,6 +25,7 @@ val orderModule = module {
     factoryOf(::GetOrderDetailsUseCase)
     factoryOf(::GetOrderItemsUseCase)
     factoryOf(::GetOrderHistoryUseCase)
+    factoryOf(::GetAllOrdersAdminUseCase)
     factoryOf(::PlaceOrderUseCase)
     factoryOf(::UpdateOrderStatusUseCase)
 
