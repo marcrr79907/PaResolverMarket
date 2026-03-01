@@ -73,7 +73,7 @@ data class OrderDetailScreen(val orderId: String) : Screen {
                             onClick = { navigator.pop() },
                             modifier = Modifier.padding(start = 12.dp).background(SurfaceVariant.copy(alpha = 0.5f), CircleShape)
                         ) {
-                            Icon(FontAwesomeIcons.Solid.ArrowLeft, contentDescription = "Back", modifier = Modifier.size(18.dp))
+                            Icon(FontAwesomeIcons.Solid.ArrowLeft, contentDescription = "Atrás", modifier = Modifier.size(18.dp))
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
@@ -128,7 +128,7 @@ fun OrderDetailContent(
                             withStyle(style = SpanStyle(color = Primary, fontWeight = FontWeight.Bold)) {
                                 append("ID: ")
                             }
-                            append(orderId.take(8))
+                            append(orderId.take(8).uppercase())
                         }, fontSize = 12.sp)
                     }
                     StatusBadge(status = order.status)
@@ -142,9 +142,9 @@ fun OrderDetailContent(
                     horizontalArrangement = Arrangement.SpaceBetween, 
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Entregar en", style = MaterialTheme.typography.labelLarge, color = OnSurfaceVariant)
+                    Text("Dirección de Entrega", style = MaterialTheme.typography.labelLarge, color = OnSurfaceVariant)
                     TextButton(onClick = onAddAddressClick, contentPadding = PaddingValues(0.dp)) {
-                        Text("Añadir dirección", color = Primary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text("Gestionar direcciones", color = Primary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
                 }
                 Surface(
@@ -156,9 +156,9 @@ fun OrderDetailContent(
                     Row(modifier = Modifier.padding(16.dp)) {
                         Icon(FontAwesomeIcons.Solid.MapMarkerAlt, null, tint = Primary, modifier = Modifier.size(20.dp))
                         Column(modifier = Modifier.padding(start = 12.dp)) {
-                            Text(order.recipientAddress ?: "N/A", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            Text(order.recipientAddress ?: "Dirección no especificada", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                             Text(order.fullRecipientName, style = MaterialTheme.typography.bodySmall, color = OnSurfaceVariant)
-                            Text(order.recipientPhone ?: "N/A", style = MaterialTheme.typography.bodySmall, color = OnSurfaceVariant)
+                            Text("Tel: ${order.recipientPhone ?: "N/A"}", style = MaterialTheme.typography.bodySmall, color = OnSurfaceVariant)
                         }
                     }
                 }
@@ -167,16 +167,20 @@ fun OrderDetailContent(
             // Order Date
             item {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("Fecha del pedido", style = MaterialTheme.typography.labelLarge, color = OnSurfaceVariant)
-                    Text(order.createdAt?.take(16)?.replace("T", " ") ?: "N/A", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+                    Text("Fecha de realización", style = MaterialTheme.typography.labelLarge, color = OnSurfaceVariant)
+                    Text(order.createdAt?.take(16)?.replace("T", " ") ?: "Desconocida", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
                 }
+            }
+
+            item {
+                Text("Resumen de compra", style = MaterialTheme.typography.labelLarge, color = OnSurfaceVariant)
             }
 
             items(items) { (orderItem, product) ->
                 OrderProductItemRow(
                     name = product.name,
                     imageUrl = product.imageUrl,
-                    category = product.categoryName ?: "Sin categoría",
+                    category = product.categoryName ?: "General",
                     quantity = orderItem.quantity,
                     price = orderItem.priceAtPurchase
                 )
@@ -184,8 +188,8 @@ fun OrderDetailContent(
 
             item {
                 Column(modifier = Modifier.padding(vertical = 12.dp)) {
-                    DetailRow("Subtotal (${items.size} items)", "$$subtotal")
-                    DetailRow("Envío", "$13.00")
+                    DetailRow("Subtotal (${items.size} productos)", "$${subtotal}")
+                    DetailRow("Costo de Envío", "$13.00")
                     Spacer(Modifier.height(8.dp))
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Text("Total", fontFamily = SpaceGrotesk, fontWeight = FontWeight.Bold, fontSize = 18.sp)

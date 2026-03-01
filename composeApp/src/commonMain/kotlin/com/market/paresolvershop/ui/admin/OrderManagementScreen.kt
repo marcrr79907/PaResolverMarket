@@ -1,5 +1,6 @@
 package com.market.paresolvershop.ui.admin
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -19,6 +20,7 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import com.market.paresolvershop.domain.model.Order
 import com.market.paresolvershop.ui.admin.components.AdminScaffold
+import com.market.paresolvershop.ui.orders.DateHeader
 import com.market.paresolvershop.ui.theme.*
 import compose.icons.FontAwesomeIcons
 import compose.icons.fontawesomeicons.Solid
@@ -26,19 +28,26 @@ import compose.icons.fontawesomeicons.solid.*
 import kotlinx.coroutines.flow.collectLatest
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.annotation.KoinExperimentalAPI
+import kotlinx.datetime.*
 
 object OrderManagementScreen : Screen {
 
-    @OptIn(KoinExperimentalAPI::class, ExperimentalMaterial3Api::class)
+    @OptIn(KoinExperimentalAPI::class, ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
         val viewModel = koinViewModel<OrderManagementViewModel>()
         val uiState by viewModel.uiState.collectAsState()
         val searchQuery by viewModel.searchQuery.collectAsState()
+        val sortType by viewModel.sortType.collectAsState()
+        val isAscending by viewModel.isAscending.collectAsState()
+        val startDate by viewModel.startDate.collectAsState()
+        val endDate by viewModel.endDate.collectAsState()
+        
         val snackbarHostState = remember { SnackbarHostState() }
-
         var showStatusDialog by remember { mutableStateOf<Order?>(null) }
+        var showSortMenu by remember { mutableStateOf(false) }
+        var showRangePicker by remember { mutableStateOf(false) }
 
         LaunchedEffect(Unit) {
             viewModel.events.collectLatest { event ->
@@ -46,6 +55,50 @@ object OrderManagementScreen : Screen {
                     is OrderManagementEvent.Success -> snackbarHostState.showSnackbar(event.message)
                     is OrderManagementEvent.Error -> snackbarHostState.showSnackbar(event.message)
                 }
+            }
+        }
+
+        if (showRangePicker) {
+            val dateRangePickerState = rememberDateRangePickerState()
+            DatePickerDialog(
+                onDismissRequest = { showRangePicker = false },
+                confirmButton = {
+                    TextButton(onClick = {
+                        val startMillis = dateRangePickerState.selectedStartDateMillis
+                        val endMillis = dateRangePickerState.selectedEndDateMillis
+                        
+                        if (startMillis != null) {
+                            val start = Instant.fromEpochMilliseconds(startMillis)
+                                .toLocalDateTime(TimeZone.UTC).date.toString()
+                            
+                            // Si end es null, tratamos como un solo día (start == end)
+                            val end = if (endMillis != null) {
+                                Instant.fromEpochMilliseconds(endMillis)
+                                    .toLocalDateTime(TimeZone.UTC).date.toString()
+                            } else start
+                            
+                            viewModel.setDateRange(start, end)
+                        }
+                        showRangePicker = false
+                    }) { Text("Seleccionar") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showRangePicker = false }) { Text("Cancelar") }
+                }
+            ) {
+                DateRangePicker(
+                    state = dateRangePickerState,
+                    modifier = Modifier.weight(1f),
+                    title = { Text("Filtrar por fecha", modifier = Modifier.padding(16.dp)) },
+                    headline = { 
+                        Text(
+                            "Selecciona un día o un rango", 
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            style = MaterialTheme.typography.labelMedium
+                        ) 
+                    },
+                    showModeToggle = true
+                )
             }
         }
 
@@ -63,6 +116,41 @@ object OrderManagementScreen : Screen {
         AdminScaffold(
             title = "Gestión de Pedidos",
             currentScreen = OrderManagementScreen,
+            actions = {
+                Box {
+                    IconButton(onClick = { showSortMenu = true }) {
+                        Icon(
+                            imageVector = if (isAscending) FontAwesomeIcons.Solid.SortAmountUp else FontAwesomeIcons.Solid.SortAmountDown,
+                            contentDescription = "Ordenar",
+                            tint = Primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = showSortMenu,
+                        onDismissRequest = { showSortMenu = false },
+                        modifier = Modifier.background(Color.White)
+                    ) {
+                        OrderSortMenuItem("Fecha", sortType == OrderSortType.DATE, isAscending) {
+                            viewModel.toggleSort(OrderSortType.DATE); showSortMenu = false
+                        }
+                        OrderSortMenuItem("Monto", sortType == OrderSortType.AMOUNT, isAscending) {
+                            viewModel.toggleSort(OrderSortType.AMOUNT); showSortMenu = false
+                        }
+                        OrderSortMenuItem("Cliente", sortType == OrderSortType.CUSTOMER, isAscending) {
+                            viewModel.toggleSort(OrderSortType.CUSTOMER); showSortMenu = false
+                        }
+                    }
+                }
+                IconButton(onClick = { showRangePicker = true }) {
+                    Icon(
+                        imageVector = FontAwesomeIcons.Solid.CalendarAlt, 
+                        contentDescription = "Filtrar por fecha", 
+                        tint = if (startDate != null) StatusPending else Primary, 
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            },
             extraHeader = {
                 Column(modifier = Modifier.fillMaxWidth().background(Color.White)) {
                     OutlinedTextField(
@@ -153,29 +241,70 @@ object OrderManagementScreen : Screen {
                 
                 when (val state = uiState) {
                     is OrderManagementUiState.Loading -> CircularProgressIndicator(Modifier.align(Alignment.Center), color = Primary)
-                    is OrderManagementUiState.Error -> Text(state.message, color = Error, modifier = Modifier.align(Alignment.Center))
+                    is OrderManagementUiState.Error -> Text(state.message, color = StatusCancelled, modifier = Modifier.align(Alignment.Center))
                     is OrderManagementUiState.Success -> {
-                        if (state.filteredOrders.isEmpty()) {
-                            Column(
-                                modifier = Modifier.fillMaxSize(),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center
+                        Column(modifier = Modifier.fillMaxSize()) {
+                            // Resumen de la vista actual
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(FontAwesomeIcons.Solid.Inbox, null, modifier = Modifier.size(64.dp), tint = SoftGray)
-                                Spacer(Modifier.height(16.dp))
-                                Text("No hay pedidos que coincidan", color = OnSurfaceVariant)
-                            }
-                        } else {
-                            LazyColumn(
-                                contentPadding = PaddingValues(16.dp),
-                                verticalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                items(state.filteredOrders) { order ->
-                                    AdminOrderCard(
-                                        order = order,
-                                        onClick = { navigator.push(AdminOrderDetailScreen(order.id!!)) },
-                                        onStatusClick = { showStatusDialog = order }
+                                if (startDate != null) {
+                                    val dateText = if (startDate == endDate) startDate else "$startDate → $endDate"
+                                    Surface(
+                                        color = StatusPending.copy(alpha = 0.1f),
+                                        shape = RoundedCornerShape(8.dp),
+                                        onClick = { viewModel.setDateRange(null, null) }
+                                    ) {
+                                        Row(Modifier.padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                                            Text(dateText!!, fontSize = 11.sp, color = StatusPending, fontWeight = FontWeight.Bold)
+                                            Icon(FontAwesomeIcons.Solid.Times, null, Modifier.size(10.dp).padding(start = 4.dp), tint = StatusPending)
+                                        }
+                                    }
+                                } else {
+                                    Spacer(Modifier.width(1.dp))
+                                }
+                                
+                                Surface(color = Primary.copy(alpha = 0.1f), shape = RoundedCornerShape(8.dp)) {
+                                    Text(
+                                        "Ingresos: $${state.totalAmountInView}",
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                                        fontSize = 12.sp,
+                                        color = Primary,
+                                        fontWeight = FontWeight.Bold
                                     )
+                                }
+                            }
+
+                            if (state.filteredOrders.isEmpty()) {
+                                Column(
+                                    modifier = Modifier.fillMaxSize(),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Icon(FontAwesomeIcons.Solid.Inbox, null, modifier = Modifier.size(64.dp), tint = SoftGray)
+                                    Spacer(Modifier.height(16.dp))
+                                    Text("No hay pedidos que coincidan", color = OnSurfaceVariant)
+                                }
+                            } else {
+                                val groupedOrders = state.filteredOrders.groupBy { it.createdAt?.take(10) ?: "Desconocido" }
+                                LazyColumn(
+                                    contentPadding = PaddingValues(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    groupedOrders.forEach { (date, ordersInDate) ->
+                                        stickyHeader {
+                                            DateHeader(date)
+                                        }
+                                        items(ordersInDate) { order ->
+                                            AdminOrderCard(
+                                                order = order,
+                                                onClick = { navigator.push(AdminOrderDetailScreen(order.id!!)) },
+                                                onStatusClick = { showStatusDialog = order }
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -184,6 +313,26 @@ object OrderManagementScreen : Screen {
             }
         }
     }
+}
+
+@Composable
+fun OrderSortMenuItem(label: String, isSelected: Boolean, isAscending: Boolean, onClick: () -> Unit) {
+    DropdownMenuItem(
+        text = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(label, modifier = Modifier.weight(1f))
+                if (isSelected) {
+                    Icon(
+                        imageVector = if (isAscending) FontAwesomeIcons.Solid.ArrowUp else FontAwesomeIcons.Solid.ArrowDown,
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp),
+                        tint = Primary
+                    )
+                }
+            }
+        },
+        onClick = onClick
+    )
 }
 
 @Composable

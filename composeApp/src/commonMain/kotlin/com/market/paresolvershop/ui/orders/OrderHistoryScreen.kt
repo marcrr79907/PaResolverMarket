@@ -43,7 +43,7 @@ object OrderHistoryScreen : Screen {
         Scaffold(
             topBar = {
                 CenterAlignedTopAppBar(
-                    title = { Text("My Orders", fontFamily = SpaceGrotesk, fontWeight = FontWeight.Bold) },
+                    title = { Text("Mis Pedidos", fontFamily = SpaceGrotesk, fontWeight = FontWeight.Bold) },
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
                 )
             }
@@ -56,7 +56,7 @@ object OrderHistoryScreen : Screen {
                         if (state.orders.isEmpty()) {
                             EmptyOrdersView()
                         } else {
-                            val groupedOrders = state.orders.groupBy { it.createdAt?.take(10) ?: "Unknown" }
+                            val groupedOrders = state.orders.groupBy { it.createdAt?.take(10) ?: "Desconocido" }
 
                             LazyColumn(
                                 contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 20.dp, top = 16.dp),
@@ -115,7 +115,7 @@ fun EmptyOrdersView() {
     ) {
         Icon(FontAwesomeIcons.Solid.BoxOpen, null, modifier = Modifier.size(80.dp), tint = SoftGray)
         Spacer(Modifier.height(16.dp))
-        Text("No orders yet", fontFamily = SpaceGrotesk, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-        Text("Your previous orders will appear here.", color = OnSurfaceVariant, modifier = Modifier.padding(top = 8.dp))
+        Text("Aún no tienes pedidos", fontFamily = SpaceGrotesk, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+        Text("Tus pedidos anteriores aparecerán aquí.", color = OnSurfaceVariant, modifier = Modifier.padding(top = 8.dp))
     }
 }
