@@ -190,7 +190,7 @@ object InventoryScreen : Screen {
                             } else {
                                 LazyColumn(
                                     modifier = Modifier.fillMaxSize(),
-                                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                                    contentPadding = PaddingValues(16.dp),
                                     verticalArrangement = Arrangement.spacedBy(12.dp)
                                 ) {
                                     items(state.products) { product ->
@@ -216,12 +216,18 @@ fun SortMenuItem(label: String, isSelected: Boolean, isAscending: Boolean, onCli
         text = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(label, modifier = Modifier.weight(1f))
-                if (isSelected) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        imageVector = if (isAscending) FontAwesomeIcons.Solid.ArrowUp else FontAwesomeIcons.Solid.ArrowDown,
+                        imageVector = FontAwesomeIcons.Solid.ArrowUp,
                         contentDescription = null,
-                        modifier = Modifier.size(14.dp),
-                        tint = Primary
+                        modifier = Modifier.size(12.dp),
+                        tint = if (isSelected && isAscending) Primary else OnSurfaceVariant.copy(alpha = 0.3f)
+                    )
+                    Icon(
+                        imageVector = FontAwesomeIcons.Solid.ArrowDown,
+                        contentDescription = null,
+                        modifier = Modifier.size(12.dp),
+                        tint = if (isSelected && !isAscending) Primary else OnSurfaceVariant.copy(alpha = 0.3f)
                     )
                 }
             }

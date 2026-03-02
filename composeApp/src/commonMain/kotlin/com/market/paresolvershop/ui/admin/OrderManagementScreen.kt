@@ -71,7 +71,6 @@ object OrderManagementScreen : Screen {
                             val start = Instant.fromEpochMilliseconds(startMillis)
                                 .toLocalDateTime(TimeZone.UTC).date.toString()
                             
-                            // Si end es null, tratamos como un solo día (start == end)
                             val end = if (endMillis != null) {
                                 Instant.fromEpochMilliseconds(endMillis)
                                     .toLocalDateTime(TimeZone.UTC).date.toString()
@@ -321,12 +320,18 @@ fun OrderSortMenuItem(label: String, isSelected: Boolean, isAscending: Boolean, 
         text = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(label, modifier = Modifier.weight(1f))
-                if (isSelected) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        imageVector = if (isAscending) FontAwesomeIcons.Solid.ArrowUp else FontAwesomeIcons.Solid.ArrowDown,
+                        imageVector = FontAwesomeIcons.Solid.ArrowUp,
                         contentDescription = null,
-                        modifier = Modifier.size(14.dp),
-                        tint = Primary
+                        modifier = Modifier.size(12.dp),
+                        tint = if (isSelected && isAscending) Primary else OnSurfaceVariant.copy(alpha = 0.3f)
+                    )
+                    Icon(
+                        imageVector = FontAwesomeIcons.Solid.ArrowDown,
+                        contentDescription = null,
+                        modifier = Modifier.size(12.dp),
+                        tint = if (isSelected && !isAscending) Primary else OnSurfaceVariant.copy(alpha = 0.3f)
                     )
                 }
             }
@@ -468,7 +473,7 @@ fun StatusSelectionDialog(
         },
         confirmButton = {},
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancelar", color = OnSurfaceVariant) }
+            TextButton(onClick = { onDismiss() }) { Text("Cancelar", color = OnSurfaceVariant) }
         }
     )
 }
