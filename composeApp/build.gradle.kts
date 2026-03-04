@@ -1,4 +1,3 @@
-import org.gradle.declarative.dsl.schema.FqName.Empty.packageName
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.util.Properties
 plugins {
@@ -45,9 +44,10 @@ kotlin {
             implementation(libs.supabase.realtime)
             implementation(libs.kotlinx.serialization.json)
 
-            // Ktor Core & Serialization
+            // Ktor Core, Serialization & Logging
             implementation(libs.ktor.client.core)
             implementation(libs.ktor.client.content.negotiation)
+            implementation(libs.ktor.client.logging)
             implementation(libs.ktor.serialization.kotlinx.json)
 
             // KOIN
@@ -75,6 +75,9 @@ kotlin {
             implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
 
+            // Stripe Native SDK
+            implementation(libs.stripe.android)
+
             // Ktor Engine Android
             implementation(libs.ktor.client.okhttp)
 
@@ -90,7 +93,6 @@ kotlin {
             implementation(libs.googleid)
         }
 
-        // Crear iosMain manualmente y vincular los targets
         val iosMain by creating {
             dependsOn(commonMain.get())
             dependencies {
@@ -111,7 +113,6 @@ android {
     namespace = "com.market.paresolvershop"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
 
-    // 1. Leer propiedades de firma desde local.properties por seguridad
     val localProperties = Properties()
     val localPropertiesFile = project.rootProject.file("local.properties")
     if (localPropertiesFile.exists()) {
@@ -120,7 +121,6 @@ android {
 
     signingConfigs {
         create("release") {
-            // Estos valores se buscan en local.properties
             storeFile = file(localProperties.getProperty("signing.storeFile") ?: "keystore.jks")
             storePassword = localProperties.getProperty("signing.storePassword") ?: ""
             keyAlias = localProperties.getProperty("signing.keyAlias") ?: ""
@@ -135,14 +135,6 @@ android {
         versionCode = 1
         versionName = "1.0"
 
-        // Leer el client ID desde local.properties (útil para Auth de Google con Supabase)
-        val localProperties = Properties()
-        val localPropertiesFile = project.rootProject.file("local.properties")
-        if (localPropertiesFile.exists()) {
-            localPropertiesFile.inputStream().use {
-                localProperties.load(it)
-            }
-        }
         val webClientId = localProperties.getProperty("web_client_id") ?: ""
         val supabaseUrl = localProperties.getProperty("supabase_url") ?: ""
         val supabaseAnonKey = localProperties.getProperty("supabase_anon_key") ?: ""
@@ -156,15 +148,12 @@ android {
 
     buildTypes {
         getByName("release") {
-            // 2. Habilitar optimización y reducción de tamaño (R8)
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            
-            // 3. Vincular la firma de release
             signingConfig = signingConfigs.getByName("release")
         }
         

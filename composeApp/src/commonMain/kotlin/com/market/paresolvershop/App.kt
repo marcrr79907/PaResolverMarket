@@ -9,6 +9,7 @@ import com.market.paresolvershop.di.addressModule
 import com.market.paresolvershop.di.authModule
 import com.market.paresolvershop.di.cartModule
 import com.market.paresolvershop.di.checkoutModule
+import com.market.paresolvershop.di.networkModule
 import com.market.paresolvershop.di.orderModule
 import com.market.paresolvershop.di.platformModule
 import com.market.paresolvershop.di.productModule
@@ -29,7 +30,7 @@ fun App() {
     KoinApplication(
         application = {
             modules(
-                addressModule, authModule, cartModule, checkoutModule,
+                addressModule, authModule, cartModule, checkoutModule, networkModule,
                 orderModule, platformModule, productModule, storeConfigModule, supabaseModule,
             )
         }
@@ -43,15 +44,21 @@ fun App() {
                 is ProfileUiState.Loading -> {
                     // Aquí podrías mostrar una Splash real o CircularProgress
                 }
+
                 is ProfileUiState.Authenticated -> {
                     if (state.isAdmin) {
                         // El Admin entra a su propio ecosistema sin BottomBar
                         Navigator(screen = AdminScreen) { navigator -> SlideTransition(navigator) }
                     } else {
                         // El Cliente entra al flujo normal
-                        Navigator(screen = BottomBarScreen()) { navigator -> SlideTransition(navigator) }
+                        Navigator(screen = BottomBarScreen()) { navigator ->
+                            SlideTransition(
+                                navigator
+                            )
+                        }
                     }
                 }
+
                 else -> {
                     // Los invitados siempre ven el catálogo (Guest Mode)
                     Navigator(screen = BottomBarScreen()) { navigator -> SlideTransition(navigator) }

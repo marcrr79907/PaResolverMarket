@@ -243,7 +243,6 @@ object OrderManagementScreen : Screen {
                     is OrderManagementUiState.Error -> Text(state.message, color = StatusCancelled, modifier = Modifier.align(Alignment.Center))
                     is OrderManagementUiState.Success -> {
                         Column(modifier = Modifier.fillMaxSize()) {
-                            // Resumen de la vista actual
                             Row(
                                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,

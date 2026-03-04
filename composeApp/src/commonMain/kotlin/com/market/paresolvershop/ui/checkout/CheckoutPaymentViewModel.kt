@@ -9,6 +9,7 @@ import com.market.paresolvershop.domain.model.UserAddress
 import com.market.paresolvershop.domain.model.StoreConfig
 import com.market.paresolvershop.domain.orders.PlaceOrderUseCase
 import com.market.paresolvershop.domain.store.GetStoreConfigUseCase
+import com.market.paresolvershop.domain.payments.CreateStripeSessionUseCase
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -21,12 +22,20 @@ sealed interface CheckoutStatus {
     data object Idle : CheckoutStatus
     data object Loading : CheckoutStatus
     data class Success(val orderId: String) : CheckoutStatus
+    data class StripeRedirect(
+        val paymentIntent: String,
+        val ephemeralKey: String,
+        val customer: String,
+        val publishableKey: String,
+        val orderId: String
+    ) : CheckoutStatus
     data class Error(val message: String) : CheckoutStatus
 }
 
 class CheckoutPaymentViewModel(
     private val placeOrderUseCase: PlaceOrderUseCase,
-    private val getStoreConfigUseCase: GetStoreConfigUseCase
+    private val getStoreConfigUseCase: GetStoreConfigUseCase,
+    private val createStripeSessionUseCase: CreateStripeSessionUseCase
 ) : ViewModel() {
 
     private val _status = MutableStateFlow<CheckoutStatus>(CheckoutStatus.Idle)
@@ -66,14 +75,39 @@ class CheckoutPaymentViewModel(
                 paymentMethod = paymentMethod
             )
 
+            // 1. Crear la orden primero en la base de datos
             when (val result = placeOrderUseCase(order, items)) {
                 is DataResult.Success -> {
-                    _status.value = CheckoutStatus.Success(result.data)
+                    val orderId = result.data
+                    
+                    if (paymentMethod == "Stripe") {
+                        // 2. Si es Stripe, solicitamos los secretos para el Payment Sheet nativo
+                        when (val stripeResult = createStripeSessionUseCase(orderId, totalAmount)) {
+                            is DataResult.Success -> {
+                                _status.value = CheckoutStatus.StripeRedirect(
+                                    paymentIntent = stripeResult.data.paymentIntent,
+                                    ephemeralKey = stripeResult.data.ephemeralKey,
+                                    customer = stripeResult.data.customer,
+                                    publishableKey = stripeResult.data.publishableKey,
+                                    orderId = orderId
+                                )
+                            }
+                            is DataResult.Error -> {
+                                _status.value = CheckoutStatus.Error("Pedido creado pero error en pasarela: ${stripeResult.message}")
+                            }
+                        }
+                    } else {
+                        _status.value = CheckoutStatus.Success(orderId)
+                    }
                 }
                 is DataResult.Error -> {
                     _status.value = CheckoutStatus.Error(result.message)
                 }
             }
         }
+    }
+
+    fun resetStatus() {
+        _status.value = CheckoutStatus.Idle
     }
 }

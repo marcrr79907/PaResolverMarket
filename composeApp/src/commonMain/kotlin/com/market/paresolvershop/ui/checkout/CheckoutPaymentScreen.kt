@@ -27,6 +27,8 @@ import com.market.paresolvershop.domain.model.CartItem
 import com.market.paresolvershop.domain.model.UserAddress
 import com.market.paresolvershop.ui.components.ScrollIndicator
 import com.market.paresolvershop.ui.components.formatPrice
+import com.market.paresolvershop.ui.payments.PaymentResult
+import com.market.paresolvershop.ui.payments.rememberPaymentHandler
 import com.market.paresolvershop.ui.theme.*
 import compose.icons.FontAwesomeIcons
 import compose.icons.fontawesomeicons.Solid
@@ -48,9 +50,9 @@ data class CheckoutPaymentScreen(
         val uiState by viewModel.uiState.collectAsState()
         val scope = rememberCoroutineScope()
         
-        var paymentMethod by remember { mutableStateOf("Cash") }
-        val subtotal = cartItems.sumOf { it.product.price * it.quantity }
+        var paymentMethod by remember { mutableStateOf("Stripe") }
         
+        val subtotal = cartItems.sumOf { it.product.price * it.quantity }
         val config = uiState.config
         val currency = config?.currencySymbol ?: "$"
         val shipping = config?.shippingFee ?: 0.0
@@ -60,22 +62,51 @@ data class CheckoutPaymentScreen(
         val listState = rememberLazyListState()
         val showScrollIndicator by remember { derivedStateOf { listState.canScrollForward } }
 
+        // Inicializamos el PaymentHandler nativo
+        val paymentHandler = rememberPaymentHandler { result ->
+            when (result) {
+                is PaymentResult.Completed -> {
+                    // Si el pago nativo fue exitoso, vamos al resumen
+                    val orderId = (uiState.status as? CheckoutStatus.StripeRedirect)?.orderId ?: ""
+                    navigator.replaceAll(CheckoutSummaryScreen(orderId))
+                }
+                is PaymentResult.Failed -> {
+                    // Mostramos el error si el pago falló en la pasarela
+                    viewModel.resetStatus() // Opcional: manejar error específico
+                }
+                is PaymentResult.Canceled -> {
+                    viewModel.resetStatus()
+                }
+            }
+        }
+
         LaunchedEffect(uiState.status) {
-            if (uiState.status is CheckoutStatus.Success) {
-                navigator.replaceAll(CheckoutSummaryScreen((uiState.status as CheckoutStatus.Success).orderId))
+            when (val status = uiState.status) {
+                is CheckoutStatus.Success -> {
+                    navigator.replaceAll(CheckoutSummaryScreen(status.orderId))
+                }
+                is CheckoutStatus.StripeRedirect -> {
+                    // Lanzamos el Payment Sheet nativo en lugar de abrir el navegador
+                    paymentHandler.presentPaymentSheet(
+                        paymentIntentClientSecret = status.paymentIntent,
+                        customerId = status.customer,
+                        customerEphemeralKeySecret = status.ephemeralKey,
+                        publishableKey = status.publishableKey)
+                }
+                else -> {}
             }
         }
 
         Scaffold(
             topBar = {
                 CenterAlignedTopAppBar(
-                    title = { Text("Resumen del Pedido", style = Typography.titleLarge, fontFamily = SpaceGrotesk, fontWeight = FontWeight.Bold) },
+                    title = { Text("Finalizar Compra", style = Typography.titleLarge, fontFamily = SpaceGrotesk, fontWeight = FontWeight.Bold) },
                     navigationIcon = {
                         IconButton(
                             onClick = { navigator.pop() },
                             modifier = Modifier.padding(start = 12.dp).background(SurfaceVariant.copy(alpha = 0.5f), CircleShape)
                         ) {
-                            Icon(FontAwesomeIcons.Solid.ArrowLeft, contentDescription = "Back", modifier = Modifier.size(18.dp))
+                            Icon(FontAwesomeIcons.Solid.ArrowLeft, contentDescription = "Atrás", modifier = Modifier.size(18.dp))
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
@@ -95,15 +126,15 @@ data class CheckoutPaymentScreen(
                             .navigationBarsPadding()
                     ) {
                         CostSummaryRow("Subtotal", "$currency${subtotal.formatPrice()}")
-                        CostSummaryRow("Envío", "$currency${shipping.formatPrice()}")
-                        CostSummaryRow("Impuestos", "$currency${tax.formatPrice()}")
+                        CostSummaryRow("Envío a Cuba", "$currency${shipping.formatPrice()}")
+                        CostSummaryRow("Tarifas de servicio", "$currency${tax.formatPrice()}")
                         HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = SoftGray.copy(alpha = 0.5f))
                         Row(
                             modifier = Modifier.fillMaxWidth(), 
                             horizontalArrangement = Arrangement.SpaceBetween, 
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text("Total a pagar", style = Typography.titleMedium, fontFamily = Inter, fontWeight = FontWeight.Bold)
+                            Text("Total", style = Typography.titleMedium, fontFamily = Inter, fontWeight = FontWeight.Bold)
                             Text("$currency${total.formatPrice()}", style = Typography.headlineMedium, fontFamily = SpaceGrotesk, color = Primary, fontWeight = FontWeight.Bold)
                         }
 
@@ -126,7 +157,9 @@ data class CheckoutPaymentScreen(
                         }
 
                         Button(
-                            onClick = { viewModel.placeOrder(selectedAddress, cartItems, paymentMethod) },
+                            onClick = { 
+                                viewModel.placeOrder(selectedAddress, cartItems, paymentMethod)
+                            },
                             modifier = Modifier.fillMaxWidth().height(56.dp),
                             shape = RoundedCornerShape(16.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = OnSurface),
@@ -135,7 +168,8 @@ data class CheckoutPaymentScreen(
                             if (uiState.status is CheckoutStatus.Loading) {
                                 CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White, strokeWidth = 2.dp)
                             } else {
-                                Text("Confirmar Pedido", style = Typography.bodyLarge, fontWeight = FontWeight.Bold, color = Color.White)
+                                val buttonText = if (paymentMethod == "Stripe") "Pagar con Tarjeta" else "Confirmar Pedido"
+                                Text(buttonText, style = Typography.bodyLarge, fontWeight = FontWeight.Bold, color = Color.White)
                             }
                         }
                     }
@@ -148,7 +182,7 @@ data class CheckoutPaymentScreen(
                     .padding(paddingValues)
                     .padding(horizontal = 20.dp)
             ) {
-                Text("Enviar a", style = Typography.titleSmall, fontFamily = SpaceGrotesk, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 16.dp, bottom = 8.dp))
+                Text("Dirección de Entrega en Cuba", style = Typography.titleSmall, fontFamily = SpaceGrotesk, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 16.dp, bottom = 8.dp))
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
@@ -168,8 +202,26 @@ data class CheckoutPaymentScreen(
 
                 Spacer(Modifier.height(24.dp))
 
+                Text("Método de Pago (EE.UU.)", style = Typography.titleSmall, fontFamily = SpaceGrotesk, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 12.dp))
+                Row(modifier = Modifier.padding(bottom = 24.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    LocalPaymentMethodCard(
+                        title = "Tarjeta / Apple Pay",
+                        icon = FontAwesomeIcons.Solid.CreditCard,
+                        isSelected = paymentMethod == "Stripe",
+                        modifier = Modifier.weight(1f),
+                        onClick = { paymentMethod = "Stripe" }
+                    )
+                    LocalPaymentMethodCard(
+                        title = "Zelle / Otros",
+                        icon = FontAwesomeIcons.Solid.ExchangeAlt,
+                        isSelected = paymentMethod == "Manual",
+                        modifier = Modifier.weight(1f),
+                        onClick = { paymentMethod = "Manual" }
+                    )
+                }
+
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text("Productos", style = Typography.titleSmall, fontFamily = SpaceGrotesk, fontWeight = FontWeight.Bold)
+                    Text("Resumen de Productos", style = Typography.titleSmall, fontFamily = SpaceGrotesk, fontWeight = FontWeight.Bold)
                     Surface(color = SurfaceVariant, shape = CircleShape) {
                         Text("${cartItems.size} ítems", style = Typography.labelSmall, color = OnSurfaceVariant, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
                     }
@@ -189,7 +241,7 @@ data class CheckoutPaymentScreen(
 
                     ScrollIndicator(
                         visible = showScrollIndicator,
-                        text = "Ver más",
+                        text = "Desliza para ver más",
                         modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 8.dp),
                         onClick = {
                             scope.launch {
@@ -198,25 +250,45 @@ data class CheckoutPaymentScreen(
                         }
                     )
                 }
-
-                Text("Método de Pago", style = Typography.titleSmall, fontFamily = SpaceGrotesk, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 12.dp))
-                Row(modifier = Modifier.padding(bottom = 24.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    LocalPaymentMethodCard(
-                        title = "Efectivo",
-                        icon = FontAwesomeIcons.Solid.MoneyBillWave,
-                        isSelected = paymentMethod == "Cash",
-                        modifier = Modifier.weight(1f),
-                        onClick = { paymentMethod = "Cash" }
-                    )
-                    LocalPaymentMethodCard(
-                        title = "Transferencia",
-                        icon = FontAwesomeIcons.Solid.University,
-                        isSelected = paymentMethod == "Bank",
-                        modifier = Modifier.weight(1f),
-                        onClick = { paymentMethod = "Bank" }
-                    )
-                }
             }
+        }
+    }
+}
+
+@Composable
+fun CostSummaryRow(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(label, style = Typography.bodyMedium, color = OnSurfaceVariant)
+        Text(value, style = Typography.bodyMedium, fontWeight = FontWeight.Bold)
+    }
+}
+
+@Composable
+fun LocalPaymentMethodCard(
+    title: String,
+    icon: ImageVector,
+    isSelected: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = modifier
+            .height(80.dp)
+            .clickable { onClick() },
+        shape = RoundedCornerShape(16.dp),
+        color = if (isSelected) Primary.copy(alpha = 0.1f) else Color.White,
+        border = BorderStroke(2.dp, if (isSelected) Primary else SurfaceVariant)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(icon, null, tint = if (isSelected) Primary else OnSurfaceVariant, modifier = Modifier.size(24.dp))
+            Text(title, style = Typography.labelMedium, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal, color = if (isSelected) Primary else OnSurfaceVariant, modifier = Modifier.padding(top = 4.dp))
         }
     }
 }
@@ -241,51 +313,8 @@ fun CheckoutItemRow(item: CartItem, currency: String) {
         }
         Column(modifier = Modifier.padding(start = 12.dp).weight(1f)) {
             Text(item.product.name, style = Typography.bodyMedium, fontWeight = FontWeight.Bold, maxLines = 1)
-            Text("Cantidad: ${item.quantity}", style = Typography.bodySmall, color = OnSurfaceVariant)
+            Text("${item.quantity} x $currency${item.product.price.formatPrice()}", style = Typography.bodySmall, color = OnSurfaceVariant)
         }
-        Text(
-            "$currency${(item.product.price * item.quantity).formatPrice()}",
-            style = Typography.bodyLarge,
-            fontFamily = SpaceGrotesk,
-            fontWeight = FontWeight.Bold,
-            color = Primary
-        )
-    }
-}
-
-@Composable
-fun LocalPaymentMethodCard(
-    title: String,
-    icon: ImageVector,
-    isSelected: Boolean,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit
-) {
-    Surface(
-        modifier = modifier.height(64.dp).clickable { onClick() },
-        shape = RoundedCornerShape(16.dp),
-        color = if (isSelected) Primary.copy(alpha = 0.08f) else MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, if (isSelected) Primary else SoftGray.copy(alpha = 0.5f))
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
-        ) {
-            Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp), tint = if (isSelected) Primary else OnSurface)
-            Spacer(Modifier.width(8.dp))
-            Text(title, style = Typography.bodyMedium, fontFamily = Inter, fontWeight = FontWeight.Bold, color = if (isSelected) Primary else OnSurface)
-        }
-    }
-}
-
-@Composable
-fun CostSummaryRow(label: String, value: String) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(label, style = Typography.bodyMedium, color = OnSurfaceVariant)
-        Text(value, style = Typography.bodyMedium, fontFamily = Inter, fontWeight = FontWeight.SemiBold)
+        Text("$currency${(item.product.price * item.quantity).formatPrice()}", style = Typography.bodyMedium, fontWeight = FontWeight.Bold)
     }
 }
