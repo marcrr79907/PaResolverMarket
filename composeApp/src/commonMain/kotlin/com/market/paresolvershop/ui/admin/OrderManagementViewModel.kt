@@ -46,10 +46,10 @@ class OrderManagementViewModel(
     private val _isAscending = MutableStateFlow(false)
     val isAscending = _isAscending.asStateFlow()
 
-    private val _startDate = MutableStateFlow<String?>(null) // YYYY-MM-DD
+    private val _startDate = MutableStateFlow<String?>(null)
     val startDate = _startDate.asStateFlow()
 
-    private val _endDate = MutableStateFlow<String?>(null) // YYYY-MM-DD
+    private val _endDate = MutableStateFlow<String?>(null)
     val endDate = _endDate.asStateFlow()
 
     val uiState: StateFlow<OrderManagementUiState> = combine(
@@ -69,12 +69,14 @@ class OrderManagementViewModel(
         if (loading) return@combine OrderManagementUiState.Loading
 
         val filtered = orders.filter { order ->
+            if (order.status == "unpaid" && query.isEmpty()) return@filter false
+
             val matchesStatus = status == null || order.status == status
             val matchesQuery = query.isEmpty() || 
                               order.id?.contains(query, ignoreCase = true) == true ||
                               order.customerName?.contains(query, ignoreCase = true) == true
             
-            val orderDate = order.createdAt?.take(10) // Get YYYY-MM-DD
+            val orderDate = order.createdAt?.take(10)
             val matchesDate = when {
                 start != null && end != null -> orderDate != null && orderDate >= start && orderDate <= end
                 start != null -> orderDate != null && orderDate >= start
@@ -91,7 +93,7 @@ class OrderManagementViewModel(
         }
 
         OrderManagementUiState.Success(
-            orders = orders,
+            orders = orders.filter { it.status != "unpaid" }, // El conteo de los Tabs tampoco incluirá unpaid
             filteredOrders = sorted,
             selectedStatus = status,
             totalAmountInView = sorted.sumOf { it.totalAmount }
@@ -103,9 +105,7 @@ class OrderManagementViewModel(
     private val _events = MutableSharedFlow<OrderManagementEvent>()
     val events = _events.asSharedFlow()
 
-    init {
-        fetchAllOrders()
-    }
+    init { fetchAllOrders() }
 
     fun fetchAllOrders() {
         viewModelScope.launch {
@@ -124,33 +124,19 @@ class OrderManagementViewModel(
         }
     }
 
-    fun filterByStatus(status: String?) {
-        _selectedStatus.value = status
-    }
-
-    fun updateSearchQuery(query: String) {
-        _searchQuery.value = query
-    }
-
+    fun filterByStatus(status: String?) { _selectedStatus.value = status }
+    fun updateSearchQuery(query: String) { _searchQuery.value = query }
     fun toggleSort(type: OrderSortType) {
-        if (_sortType.value == type) {
-            _isAscending.value = !_isAscending.value
-        } else {
-            _sortType.value = type
-            _isAscending.value = type != OrderSortType.DATE
-        }
+        if (_sortType.value == type) _isAscending.value = !_isAscending.value
+        else { _sortType.value = type; _isAscending.value = type != OrderSortType.DATE }
     }
-
-    fun setDateRange(start: String?, end: String?) {
-        _startDate.value = start
-        _endDate.value = end
-    }
+    fun setDateRange(start: String?, end: String?) { _startDate.value = start; _endDate.value = end }
 
     fun updateStatus(orderId: String, newStatus: String) {
         viewModelScope.launch {
             when (val result = updateOrderStatusUseCase(orderId, newStatus)) {
                 is DataResult.Success -> {
-                    _events.emit(OrderManagementEvent.Success("Pedido actualizado correctamente"))
+                    _events.emit(OrderManagementEvent.Success("Pedido actualizado"))
                     _allOrders.value = _allOrders.value.map {
                         if (it.id == orderId) it.copy(status = newStatus) else it
                     }

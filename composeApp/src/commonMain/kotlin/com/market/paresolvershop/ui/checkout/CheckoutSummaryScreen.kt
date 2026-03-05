@@ -1,13 +1,24 @@
 package com.market.paresolvershop.ui.checkout
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -15,9 +26,13 @@ import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
-import com.market.paresolvershop.ui.navigation.bottombar.BottomBarScreen
+import cafe.adriel.voyager.navigator.tab.LocalTabNavigator
 import com.market.paresolvershop.ui.navigation.bottombar.OrderTab
-import com.market.paresolvershop.ui.theme.*
+import com.market.paresolvershop.ui.theme.Inter
+import com.market.paresolvershop.ui.theme.OnSurface
+import com.market.paresolvershop.ui.theme.OnSurfaceVariant
+import com.market.paresolvershop.ui.theme.Primary
+import com.market.paresolvershop.ui.theme.SpaceGrotesk
 import compose.icons.FontAwesomeIcons
 import compose.icons.fontawesomeicons.Solid
 import compose.icons.fontawesomeicons.solid.CheckCircle
@@ -26,6 +41,7 @@ data class CheckoutSummaryScreen(val orderId: String) : Screen {
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
+        val tabNavigator = LocalTabNavigator.current
         
         Column(
             modifier = Modifier.fillMaxSize().padding(24.dp),
@@ -77,8 +93,8 @@ data class CheckoutSummaryScreen(val orderId: String) : Screen {
             
             Button(
                 onClick = {
-                    // Volvemos al inicio, específicamente a la pestaña de pedidos
-                    navigator.replaceAll(BottomBarScreen(OrderTab))
+                    tabNavigator.current = OrderTab
+                    navigator.popUntilRoot()
                 },
                 modifier = Modifier.fillMaxWidth().height(56.dp),
                 shape = RoundedCornerShape(16.dp),

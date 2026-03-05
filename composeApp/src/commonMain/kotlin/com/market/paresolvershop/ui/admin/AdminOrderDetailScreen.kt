@@ -26,6 +26,8 @@ import com.market.paresolvershop.ui.theme.*
 import compose.icons.FontAwesomeIcons
 import compose.icons.fontawesomeicons.Solid
 import compose.icons.fontawesomeicons.solid.*
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonPrimitive
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.annotation.KoinExperimentalAPI
 import org.koin.core.parameter.parametersOf
@@ -37,14 +39,14 @@ data class AdminOrderDetailScreen(val orderId: String) : Screen {
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
         val viewModel = koinViewModel<OrderDetailViewModel> { parametersOf(orderId) }
-        val adminViewModel = koinViewModel<OrderManagementViewModel>() // Para actualizar estados
+        val adminViewModel = koinViewModel<OrderManagementViewModel>()
         val uiState by viewModel.uiState.collectAsState()
         
         var showStatusDialog by remember { mutableStateOf(false) }
 
         AdminScaffold(
             title = "Gestión de Pedido",
-            currentScreen = OrderManagementScreen, // Mantenemos el foco en Órdenes
+            currentScreen = OrderManagementScreen,
             actions = {
                 IconButton(onClick = { showStatusDialog = true }) {
                     Icon(FontAwesomeIcons.Solid.Edit, null, tint = Primary, modifier = Modifier.size(20.dp))
@@ -64,7 +66,7 @@ data class AdminOrderDetailScreen(val orderId: String) : Screen {
                                 onStatusSelected = { newStatus ->
                                     adminViewModel.updateStatus(order.id!!, newStatus)
                                     showStatusDialog = false
-                                    navigator.pop() // Volvemos atrás tras actualizar
+                                    viewModel.fetchOrderDetails()
                                 },
                                 onDismiss = { showStatusDialog = false }
                             )
@@ -75,20 +77,18 @@ data class AdminOrderDetailScreen(val orderId: String) : Screen {
                             contentPadding = PaddingValues(20.dp),
                             verticalArrangement = Arrangement.spacedBy(20.dp)
                         ) {
-                            // Card de Información del Cliente
                             item {
                                 AdminSectionCard("Información del Cliente", FontAwesomeIcons.Solid.User) {
-                                    Column {
+                                    Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                                         Text(order.customerName ?: "Desconocido", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                                         Text("ID Usuario: ${order.userId}", fontSize = 11.sp, color = OnSurfaceVariant)
                                     }
                                 }
                             }
 
-                            // Card de Entrega
                             item {
                                 AdminSectionCard("Detalles de Entrega", FontAwesomeIcons.Solid.MapMarkerAlt) {
-                                    Column {
+                                    Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                                         Text(order.fullRecipientName, fontWeight = FontWeight.Bold)
                                         Text(order.recipientAddress ?: "Sin dirección", fontSize = 14.sp)
                                         Text("Tel: ${order.recipientPhone}", fontSize = 14.sp)
@@ -97,19 +97,28 @@ data class AdminOrderDetailScreen(val orderId: String) : Screen {
                                 }
                             }
 
-                            // Estado y Pago
                             item {
                                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                     AdminSectionCard("Estado", FontAwesomeIcons.Solid.InfoCircle, Modifier.weight(1f)) {
-                                        StatusBadge(order.status)
+                                        Box(Modifier.padding(16.dp)) {
+                                            StatusBadge(order.status)
+                                        }
                                     }
                                     AdminSectionCard("Pago", FontAwesomeIcons.Solid.CreditCard, Modifier.weight(1f)) {
-                                        Text(order.paymentMethod.uppercase(), fontWeight = FontWeight.Bold, color = Primary)
+                                        Box(Modifier.padding(16.dp)) {
+                                            val cardBrand = order.paymentDetails?.get("brand")?.jsonPrimitive?.contentOrNull
+                                            val cardLast4 = order.paymentDetails?.get("last4")?.jsonPrimitive?.contentOrNull
+                                            
+                                            if (cardBrand != null && cardLast4 != null) {
+                                                Text("${cardBrand.uppercase()} **** $cardLast4", fontWeight = FontWeight.Bold, color = Primary, fontSize = 13.sp)
+                                            } else {
+                                                Text(order.paymentMethod.uppercase(), fontWeight = FontWeight.Bold, color = Primary)
+                                            }
+                                        }
                                     }
                                 }
                             }
 
-                            // Resumen de Productos
                             item {
                                 Text("Productos", style = Typography.titleMedium, fontWeight = FontWeight.Bold)
                             }
@@ -129,17 +138,13 @@ data class AdminOrderDetailScreen(val orderId: String) : Screen {
                                 Surface(
                                     modifier = Modifier.fillMaxWidth(),
                                     shape = RoundedCornerShape(16.dp),
-                                    color = Color.White
+                                    color = Color.White,
+                                    shadowElevation = 1.dp
                                 ) {
                                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
-                                            Text("Subtotal", color = OnSurfaceVariant)
-                                            Text("$${state.order.totalAmount - 13.0}")
-                                        }
-                                        Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
-                                            Text("Costo de Envío", color = OnSurfaceVariant)
-                                            Text("$13.00")
-                                        }
+                                        DetailRow("Subtotal", "${state.config.currencySymbol}${state.order.totalAmount - state.config.shippingFee - state.config.taxFee}")
+                                        DetailRow("Envío", "${state.config.currencySymbol}${state.config.shippingFee}")
+                                        DetailRow("Tarifas", "${state.config.currencySymbol}${state.config.taxFee}")
                                         HorizontalDivider(color = SurfaceVariant.copy(alpha = 0.5f))
                                         Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
                                             Text("Total", fontWeight = FontWeight.Bold, fontSize = 18.sp)
@@ -171,13 +176,27 @@ fun AdminSectionCard(
         color = Color.White,
         shadowElevation = 1.dp
     ) {
-        Column(Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 12.dp)) {
+        Column {
+            Row(
+                verticalAlignment = Alignment.CenterVertically, 
+                modifier = Modifier.padding(top = 16.dp, start = 16.dp, end = 16.dp, bottom = 8.dp)
+            ) {
                 Icon(icon, null, modifier = Modifier.size(16.dp), tint = Primary)
                 Spacer(Modifier.width(8.dp))
                 Text(title, style = Typography.labelLarge, color = OnSurfaceVariant)
             }
             content()
         }
+    }
+}
+
+@Composable
+private fun DetailRow(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(label, style = MaterialTheme.typography.bodySmall, color = OnSurfaceVariant)
+        Text(value, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
     }
 }

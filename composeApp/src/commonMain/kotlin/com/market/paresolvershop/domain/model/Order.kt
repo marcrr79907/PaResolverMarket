@@ -2,6 +2,7 @@ package com.market.paresolvershop.domain.model
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonObject
 
 @Serializable
 data class Order(
@@ -20,7 +21,10 @@ data class Order(
     @SerialName("created_at")
     val createdAt: String? = null,
     
-    // Estos campos vendrán del join con user_addresses en el repositorio
+    // Campo para detalles enriquecidos del pago (Marca tarjeta, últimos 4 dígitos, etc.)
+    @SerialName("payment_details")
+    val paymentDetails: JsonObject? = null,
+    
     @SerialName("recipient_first_name")
     val recipientFirstName: String? = null,
     @SerialName("recipient_last_name")
@@ -32,7 +36,6 @@ data class Order(
     @SerialName("recipient_city")
     val recipientCity: String? = null,
 
-    // Campo del Join con users (para Admin)
     val customerName: String? = null
 ) {
     val fullRecipientName: String

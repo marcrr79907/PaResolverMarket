@@ -2,15 +2,18 @@ package com.market.paresolvershop.ui.orders
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.market.paresolvershop.data.repository.CartRepository
 import com.market.paresolvershop.domain.cart.AddToCartUseCase
 import com.market.paresolvershop.domain.cart.ClearCartUseCase
 import com.market.paresolvershop.domain.model.DataResult
 import com.market.paresolvershop.domain.model.Order
 import com.market.paresolvershop.domain.model.OrderItem
 import com.market.paresolvershop.domain.model.Product
+import com.market.paresolvershop.domain.model.StoreConfig
 import com.market.paresolvershop.domain.orders.GetOrderDetailsUseCase
 import com.market.paresolvershop.domain.orders.GetOrderItemsUseCase
+import com.market.paresolvershop.domain.store.GetStoreConfigUseCase
+import com.market.paresolvershop.domain.payments.CreateStripeSessionUseCase
+import com.market.paresolvershop.ui.checkout.CheckoutStatus
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -21,7 +24,9 @@ sealed interface OrderDetailUiState {
     data object Loading : OrderDetailUiState
     data class Success(
         val order: Order,
-        val items: List<Pair<OrderItem, Product>>
+        val items: List<Pair<OrderItem, Product>>,
+        val config: StoreConfig,
+        val paymentStatus: CheckoutStatus = CheckoutStatus.Idle
     ) : OrderDetailUiState
     data class Error(val message: String) : OrderDetailUiState
 }
@@ -29,6 +34,7 @@ sealed interface OrderDetailUiState {
 sealed interface OrderDetailEvent {
     data object ReOrderSuccess : OrderDetailEvent
     data class Error(val message: String) : OrderDetailEvent
+    data object PaymentSuccess : OrderDetailEvent
 }
 
 class OrderDetailViewModel(
@@ -36,7 +42,9 @@ class OrderDetailViewModel(
     private val getOrderDetailsUseCase: GetOrderDetailsUseCase,
     private val getOrderItemsUseCase: GetOrderItemsUseCase,
     private val clearCartUseCase: ClearCartUseCase,
-    private val addToCartUseCase: AddToCartUseCase
+    private val addToCartUseCase: AddToCartUseCase,
+    private val getStoreConfigUseCase: GetStoreConfigUseCase,
+    private val createStripeSessionUseCase: CreateStripeSessionUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<OrderDetailUiState>(OrderDetailUiState.Loading)
@@ -52,14 +60,17 @@ class OrderDetailViewModel(
     fun fetchOrderDetails() {
         viewModelScope.launch {
             _uiState.value = OrderDetailUiState.Loading
+            getStoreConfigUseCase()
             
             val orderResult = getOrderDetailsUseCase(orderId)
             val itemsResult = getOrderItemsUseCase(orderId)
+            val config = getStoreConfigUseCase.storeConfig.value ?: StoreConfig()
 
             if (orderResult is DataResult.Success && itemsResult is DataResult.Success) {
                 _uiState.value = OrderDetailUiState.Success(
                     order = orderResult.data,
-                    items = itemsResult.data
+                    items = itemsResult.data,
+                    config = config
                 )
             } else {
                 val errorMsg = (orderResult as? DataResult.Error)?.message 
@@ -70,6 +81,37 @@ class OrderDetailViewModel(
         }
     }
 
+    fun retryPayment(amount: Double) {
+        val currentState = _uiState.value as? OrderDetailUiState.Success ?: return
+        
+        viewModelScope.launch {
+            _uiState.value = currentState.copy(paymentStatus = CheckoutStatus.Loading)
+            
+            when (val result = createStripeSessionUseCase(orderId, amount)) {
+                is DataResult.Success -> {
+                    _uiState.value = currentState.copy(
+                        paymentStatus = CheckoutStatus.StripeRedirect(
+                            paymentIntent = result.data.paymentIntent,
+                            ephemeralKey = result.data.ephemeralKey,
+                            customer = result.data.customer,
+                            publishableKey = result.data.publishableKey,
+                            orderId = orderId
+                        )
+                    )
+                }
+                is DataResult.Error -> {
+                    _uiState.value = currentState.copy(paymentStatus = CheckoutStatus.Error(result.message))
+                    _eventFlow.emit(OrderDetailEvent.Error(result.message))
+                }
+            }
+        }
+    }
+
+    fun resetPaymentStatus() {
+        val currentState = _uiState.value as? OrderDetailUiState.Success ?: return
+        _uiState.value = currentState.copy(paymentStatus = CheckoutStatus.Idle)
+    }
+
     fun reOrder(items: List<Pair<OrderItem, Product>>) {
         viewModelScope.launch {
             try {
@@ -77,15 +119,10 @@ class OrderDetailViewModel(
                     _eventFlow.emit(OrderDetailEvent.Error("No hay productos para reordenar"))
                     return@launch
                 }
-                
-                // Clean cart before re-order
                 clearCartUseCase()
-                
-                // Add products with quantity
                 items.forEach { (orderItem, product) ->
                     addToCartUseCase(product, orderItem.quantity)
                 }
-                
                 _eventFlow.emit(OrderDetailEvent.ReOrderSuccess)
             } catch (e: Exception) {
                 _eventFlow.emit(OrderDetailEvent.Error("Error al procesar el Re-Order"))

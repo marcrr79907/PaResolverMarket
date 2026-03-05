@@ -68,17 +68,15 @@ class OrderRepositoryImpl(
                     put("p_address_id", order.addressId)
                     put("p_total_amount", order.totalAmount)
                     put("p_payment_method", order.paymentMethod)
+                    put("p_status", order.status)
                     put("p_items", itemsJson)
                 }
             )
 
-            // Decodificamos el resultado (el ID del pedido) directamente
             val orderId = response.decodeAs<String>()
-
             fetchOrders()
             DataResult.Success(orderId)
         } catch (e: Exception) {
-            // Si el servidor devuelve "Stock insuficiente", llegará aquí en el e.message
             DataResult.Error(e.message ?: "Error al procesar el pedido.")
         }
     }

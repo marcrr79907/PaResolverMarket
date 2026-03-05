@@ -62,20 +62,15 @@ data class CheckoutPaymentScreen(
         val listState = rememberLazyListState()
         val showScrollIndicator by remember { derivedStateOf { listState.canScrollForward } }
 
-        // Inicializamos el PaymentHandler nativo
+        // Inicializamos el manejador de pagos nativo de Stripe
         val paymentHandler = rememberPaymentHandler { result ->
             when (result) {
                 is PaymentResult.Completed -> {
-                    // Si el pago nativo fue exitoso, vamos al resumen
                     val orderId = (uiState.status as? CheckoutStatus.StripeRedirect)?.orderId ?: ""
                     navigator.replaceAll(CheckoutSummaryScreen(orderId))
                 }
-                is PaymentResult.Failed -> {
-                    // Mostramos el error si el pago falló en la pasarela
-                    viewModel.resetStatus() // Opcional: manejar error específico
-                }
-                is PaymentResult.Canceled -> {
-                    viewModel.resetStatus()
+                is PaymentResult.Failed, is PaymentResult.Canceled -> {
+                    viewModel.resetStatus() // Volvemos al estado Idle
                 }
             }
         }
@@ -86,14 +81,15 @@ data class CheckoutPaymentScreen(
                     navigator.replaceAll(CheckoutSummaryScreen(status.orderId))
                 }
                 is CheckoutStatus.StripeRedirect -> {
-                    // Lanzamos el Payment Sheet nativo en lugar de abrir el navegador
                     paymentHandler.presentPaymentSheet(
                         paymentIntentClientSecret = status.paymentIntent,
                         customerId = status.customer,
                         customerEphemeralKeySecret = status.ephemeralKey,
-                        publishableKey = status.publishableKey)
+                        publishableKey = status.publishableKey,
+                        merchantName = config?.storeName ?: "PaResolver Shop"
+                    )
                 }
-                else -> {}
+                else -> {} // Loading e Idle no requieren navegación
             }
         }
 
@@ -157,7 +153,7 @@ data class CheckoutPaymentScreen(
                         }
 
                         Button(
-                            onClick = { 
+                            onClick = {
                                 viewModel.placeOrder(selectedAddress, cartItems, paymentMethod)
                             },
                             modifier = Modifier.fillMaxWidth().height(56.dp),

@@ -68,20 +68,24 @@ class CheckoutPaymentViewModel(
             val subtotal = items.sumOf { it.product.price * it.quantity }
             val totalAmount = subtotal + config.shippingFee + config.taxFee
 
+            // DEFINIMOS EL ESTADO INICIAL: 
+            // Si es Stripe, la orden nace como "unpaid". 
+            // Si es Manual (Zelle), nace como "pending" para que el admin la verifique.
+            val initialStatus = if (paymentMethod == "Stripe") "unpaid" else "pending"
+
             val order = Order(
                 userId = userId,
                 addressId = addressId,
                 totalAmount = totalAmount,
-                paymentMethod = paymentMethod
+                paymentMethod = paymentMethod,
+                status = initialStatus
             )
 
-            // 1. Crear la orden primero en la base de datos
             when (val result = placeOrderUseCase(order, items)) {
                 is DataResult.Success -> {
                     val orderId = result.data
                     
                     if (paymentMethod == "Stripe") {
-                        // 2. Si es Stripe, solicitamos los secretos para el Payment Sheet nativo
                         when (val stripeResult = createStripeSessionUseCase(orderId, totalAmount)) {
                             is DataResult.Success -> {
                                 _status.value = CheckoutStatus.StripeRedirect(
@@ -93,7 +97,7 @@ class CheckoutPaymentViewModel(
                                 )
                             }
                             is DataResult.Error -> {
-                                _status.value = CheckoutStatus.Error("Pedido creado pero error en pasarela: ${stripeResult.message}")
+                                _status.value = CheckoutStatus.Error("Error en pasarela: ${stripeResult.message}")
                             }
                         }
                     } else {

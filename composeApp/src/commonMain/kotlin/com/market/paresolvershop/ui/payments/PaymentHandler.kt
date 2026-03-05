@@ -12,7 +12,8 @@ interface PaymentHandler {
         paymentIntentClientSecret: String,
         customerId: String? = null,
         customerEphemeralKeySecret: String? = null,
-        publishableKey: String
+        publishableKey: String,
+        merchantName: String
     )
 }
 

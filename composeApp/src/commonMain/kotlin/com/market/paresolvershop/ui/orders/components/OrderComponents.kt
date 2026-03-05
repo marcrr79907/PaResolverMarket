@@ -45,18 +45,17 @@ fun OrderCard(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Order #${order.id?.take(8)}",
+                        text = "Pedido #${order.id?.take(8)}",
                         fontFamily = Inter,
                         fontWeight = FontWeight.Bold,
                         fontSize = 15.sp
                     )
                     
-                    // CORRECCIÓN: Mostrar nombre del cliente solo si es Admin y NO es null
                     if (isAdmin && order.customerName != null) {
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
                             Icon(FontAwesomeIcons.Solid.UserCircle, null, modifier = Modifier.size(14.dp), tint = Primary)
                             Text(
-                                text = " Customer: ${order.customerName}",
+                                text = " Cliente: ${order.customerName}",
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = OnSurface
@@ -67,7 +66,7 @@ fun OrderCard(
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
                         Icon(FontAwesomeIcons.Solid.MapMarkerAlt, null, modifier = Modifier.size(12.dp), tint = if (isAdmin) OnSurfaceVariant else Primary)
                         Text(
-                            text = " ${if (isAdmin) "Delivery to: " else ""}${order.fullRecipientName}",
+                            text = " ${if (isAdmin) "Enviar a: " else ""}${order.fullRecipientName}",
                             style = MaterialTheme.typography.labelSmall,
                             color = OnSurfaceVariant,
                             modifier = Modifier.padding(start = 4.dp)
@@ -107,7 +106,7 @@ fun OrderCard(
 
                 if (isAdmin && onStatusClick != null) {
                     TextButton(onClick = onStatusClick) {
-                        Text("Change Status", style = MaterialTheme.typography.labelLarge, color = Primary)
+                        Text("Cambiar Estado", style = MaterialTheme.typography.labelLarge, color = Primary)
                     }
                 } else {
                     Button(
@@ -117,7 +116,7 @@ fun OrderCard(
                         shape = RoundedCornerShape(8.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = SurfaceVariant, contentColor = OnSurface)
                     ) {
-                        Text("Details", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text("Detalles", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -141,7 +140,14 @@ fun StatusBadge(
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
         ) {
             Text(
-                text = status.uppercase(),
+                text = when(status.lowercase()) {
+                    "unpaid" -> "ESPERANDO PAGO"
+                    "pending" -> "PENDIENTE"
+                    "shipped" -> "ENVIADO"
+                    "delivered" -> "ENTREGADO"
+                    "cancelled" -> "CANCELADO"
+                    else -> status.uppercase()
+                },
                 color = color,
                 fontSize = 9.sp,
                 fontWeight = FontWeight.Bold
@@ -191,9 +197,10 @@ fun OrderProductItemRow(
 }
 
 fun getStatusColor(status: String): Color = when (status.lowercase()) {
-    "delivered" -> Success
-    "shipped" -> Color(0xFF2196F3)
-    "pending" -> Color(0xFFFFA000)
-    "cancelled" -> Error
+    "unpaid" -> StatusPending
+    "pending" -> StatusPending
+    "shipped" -> StatusShipped
+    "delivered" -> StatusDelivered
+    "cancelled" -> StatusCancelled
     else -> Primary
 }
