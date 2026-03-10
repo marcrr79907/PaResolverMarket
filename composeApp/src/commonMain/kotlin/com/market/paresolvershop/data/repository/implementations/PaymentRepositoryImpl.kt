@@ -9,9 +9,12 @@ class PaymentRepositoryImpl(
     private val apiService: PaymentApiService
 ) : PaymentRepository {
     override suspend fun createStripeSession(
-        orderId: String, totalAmount: Double
+        orderId: String, 
+        totalAmount: Double,
+        customerEmail: String,
+        customerName: String
     ): DataResult<StripeSessionResponse> = runCatching {
-        val response = apiService.createStripeSession(orderId, totalAmount)
+        val response = apiService.createStripeSession(orderId, totalAmount, customerEmail, customerName)
         DataResult.Success(response)
     }.getOrElse {
         DataResult.Error(it.message ?: "Error al conectar con la pasarela de pago")

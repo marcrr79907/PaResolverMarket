@@ -13,19 +13,25 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class StripeSessionRequest(
     val orderId: String,
-    val amount: Double
+    val amount: Double,
+    val customerEmail: String,
+    val customerName: String
 )
 
 class PaymentApiService(private val baseUrl: String, private val anonKey: String) {
     
-    suspend fun createStripeSession(orderId: String, totalAmount: Double): StripeSessionResponse {
+    suspend fun createStripeSession(
+        orderId: String, 
+        totalAmount: Double,
+        email: String,
+        name: String
+    ): StripeSessionResponse {
         val endpoint = "$baseUrl/functions/v1/create-stripe-session"
         
         val response = NetworkUtils.httpClient.post(endpoint) {
             contentType(ContentType.Application.Json)
-            // Necesitamos la Anon Key para autorizar la llamada a la Edge Function
             header("Authorization", "Bearer $anonKey")
-            setBody(StripeSessionRequest(orderId, totalAmount))
+            setBody(StripeSessionRequest(orderId, totalAmount, email, name))
         }
         return response.body()
     }

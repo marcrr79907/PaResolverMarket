@@ -2,6 +2,8 @@
 .kotlin
 .gradle
 **/build/
+supabase/
+.vscode/
 xcuserdata
 !src/**/build/
 local.properties

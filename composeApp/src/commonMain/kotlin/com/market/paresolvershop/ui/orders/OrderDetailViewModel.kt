@@ -2,6 +2,7 @@ package com.market.paresolvershop.ui.orders
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.market.paresolvershop.data.repository.AuthRepository
 import com.market.paresolvershop.domain.cart.AddToCartUseCase
 import com.market.paresolvershop.domain.cart.ClearCartUseCase
 import com.market.paresolvershop.domain.model.DataResult
@@ -44,7 +45,8 @@ class OrderDetailViewModel(
     private val clearCartUseCase: ClearCartUseCase,
     private val addToCartUseCase: AddToCartUseCase,
     private val getStoreConfigUseCase: GetStoreConfigUseCase,
-    private val createStripeSessionUseCase: CreateStripeSessionUseCase
+    private val createStripeSessionUseCase: CreateStripeSessionUseCase,
+    private val authRepository: AuthRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<OrderDetailUiState>(OrderDetailUiState.Loading)
@@ -87,7 +89,17 @@ class OrderDetailViewModel(
         viewModelScope.launch {
             _uiState.value = currentState.copy(paymentStatus = CheckoutStatus.Loading)
             
-            when (val result = createStripeSessionUseCase(orderId, amount)) {
+            val user = authRepository.getCurrentUser()
+            if (user == null) {
+                _uiState.value = currentState.copy(paymentStatus = CheckoutStatus.Error("Sesión expirada"))
+                _eventFlow.emit(OrderDetailEvent.Error("Sesión expirada. Inicia sesión nuevamente."))
+                return@launch
+            }
+
+            val customerName = user.name ?: "Cliente"
+            val customerEmail = user.email ?: ""
+
+            when (val result = createStripeSessionUseCase(orderId, amount, customerEmail, customerName)) {
                 is DataResult.Success -> {
                     _uiState.value = currentState.copy(
                         paymentStatus = CheckoutStatus.StripeRedirect(

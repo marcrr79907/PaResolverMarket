@@ -2,6 +2,7 @@ package com.market.paresolvershop.ui.checkout
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.market.paresolvershop.data.repository.AuthRepository
 import com.market.paresolvershop.domain.model.CartItem
 import com.market.paresolvershop.domain.model.DataResult
 import com.market.paresolvershop.domain.model.Order
@@ -24,8 +25,8 @@ sealed interface CheckoutStatus {
     data class Success(val orderId: String) : CheckoutStatus
     data class StripeRedirect(
         val paymentIntent: String,
-        val ephemeralKey: String,
-        val customer: String,
+        val ephemeralKey: String?,
+        val customer: String?,
         val publishableKey: String,
         val orderId: String
     ) : CheckoutStatus
@@ -35,7 +36,8 @@ sealed interface CheckoutStatus {
 class CheckoutPaymentViewModel(
     private val placeOrderUseCase: PlaceOrderUseCase,
     private val getStoreConfigUseCase: GetStoreConfigUseCase,
-    private val createStripeSessionUseCase: CreateStripeSessionUseCase
+    private val createStripeSessionUseCase: CreateStripeSessionUseCase,
+    private val authRepository: AuthRepository // Inyectamos AuthRepository para datos reales
 ) : ViewModel() {
 
     private val _status = MutableStateFlow<CheckoutStatus>(CheckoutStatus.Idle)
@@ -62,15 +64,19 @@ class CheckoutPaymentViewModel(
             _status.value = CheckoutStatus.Loading
             
             val config = uiState.value.config ?: StoreConfig()
-            val userId = address.userId ?: ""
+            val user = authRepository.getCurrentUser()
+            
+            if (user == null) {
+                _status.value = CheckoutStatus.Error("Sesión expirada. Inicia sesión nuevamente.")
+                return@launch
+            }
+
+            val userId = user.id
             val addressId = address.id ?: ""
 
             val subtotal = items.sumOf { it.product.price * it.quantity }
             val totalAmount = subtotal + config.shippingFee + config.taxFee
 
-            // DEFINIMOS EL ESTADO INICIAL: 
-            // Si es Stripe, la orden nace como "unpaid". 
-            // Si es Manual (Zelle), nace como "pending" para que el admin la verifique.
             val initialStatus = if (paymentMethod == "Stripe") "unpaid" else "pending"
 
             val order = Order(
@@ -86,7 +92,10 @@ class CheckoutPaymentViewModel(
                     val orderId = result.data
                     
                     if (paymentMethod == "Stripe") {
-                        when (val stripeResult = createStripeSessionUseCase(orderId, totalAmount)) {
+                        val customerName = user.name
+                        val customerEmail = user.email
+
+                        when (val stripeResult = createStripeSessionUseCase(orderId, totalAmount, customerEmail, customerName)) {
                             is DataResult.Success -> {
                                 _status.value = CheckoutStatus.StripeRedirect(
                                     paymentIntent = stripeResult.data.paymentIntent,
@@ -97,7 +106,7 @@ class CheckoutPaymentViewModel(
                                 )
                             }
                             is DataResult.Error -> {
-                                _status.value = CheckoutStatus.Error("Error en pasarela: ${stripeResult.message}")
+                                _status.value = CheckoutStatus.Error("Pedido creado pero error en pasarela: ${stripeResult.message}")
                             }
                         }
                     } else {

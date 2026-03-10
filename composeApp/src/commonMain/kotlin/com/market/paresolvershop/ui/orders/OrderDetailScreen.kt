@@ -296,7 +296,7 @@ fun OrderDetailContent(
 }
 
 @Composable
-fun DetailRow(label: String, value: String) {
+private fun DetailRow(label: String, value: String) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween

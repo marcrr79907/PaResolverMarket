@@ -5,7 +5,12 @@ import com.market.paresolvershop.domain.model.DataResult
 import com.market.paresolvershop.domain.model.StripeSessionResponse
 
 class CreateStripeSessionUseCase(private val repository: PaymentRepository) {
-    suspend operator fun invoke(orderId: String, totalAmount: Double): DataResult<StripeSessionResponse> {
-        return repository.createStripeSession(orderId, totalAmount)
+    suspend operator fun invoke(
+        orderId: String, 
+        totalAmount: Double,
+        customerEmail: String,
+        customerName: String
+    ): DataResult<StripeSessionResponse> {
+        return repository.createStripeSession(orderId, totalAmount, customerEmail, customerName)
     }
 }

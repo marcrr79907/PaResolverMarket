@@ -106,11 +106,11 @@ data class AdminOrderDetailScreen(val orderId: String) : Screen {
                                     }
                                     AdminSectionCard("Pago", FontAwesomeIcons.Solid.CreditCard, Modifier.weight(1f)) {
                                         Box(Modifier.padding(16.dp)) {
-                                            val cardBrand = order.paymentDetails?.get("brand")?.jsonPrimitive?.contentOrNull
-                                            val cardLast4 = order.paymentDetails?.get("last4")?.jsonPrimitive?.contentOrNull
+                                            val brand = order.paymentDetails?.get("brand")?.jsonPrimitive?.contentOrNull
+                                            val last4 = order.paymentDetails?.get("last4")?.jsonPrimitive?.contentOrNull
                                             
-                                            if (cardBrand != null && cardLast4 != null) {
-                                                Text("${cardBrand.uppercase()} **** $cardLast4", fontWeight = FontWeight.Bold, color = Primary, fontSize = 13.sp)
+                                            if (brand != null) {
+                                                Text("${brand.uppercase()} **** $last4", fontWeight = FontWeight.Bold, color = Primary, fontSize = 13.sp)
                                             } else {
                                                 Text(order.paymentMethod.uppercase(), fontWeight = FontWeight.Bold, color = Primary)
                                             }
@@ -148,7 +148,7 @@ data class AdminOrderDetailScreen(val orderId: String) : Screen {
                                         HorizontalDivider(color = SurfaceVariant.copy(alpha = 0.5f))
                                         Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
                                             Text("Total", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                                            Text("$${state.order.totalAmount}", fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, color = Primary)
+                                            Text("${state.config.currencySymbol}${state.order.totalAmount}", fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, color = Primary)
                                         }
                                     }
                                 }
@@ -193,7 +193,7 @@ fun AdminSectionCard(
 @Composable
 private fun DetailRow(label: String, value: String) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(label, style = MaterialTheme.typography.bodySmall, color = OnSurfaceVariant)

@@ -5,7 +5,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class StripeSessionResponse(
     val paymentIntent: String,
-    val ephemeralKey: String,
-    val customer: String,
-    val publishableKey: String
+    val publishableKey: String,
+    val ephemeralKey: String? = null,
+    val customer: String? = null
 )
